@@ -502,6 +502,56 @@ def contextual_hvcdp_activity(activity, context):
     return activity
 
 
+GULAYAN_PRIORITY = [
+    "ALICIA",
+    "BAGGAO",
+    "SANMARIANO",
+    "CABATUAN",
+    "CORDON",
+    "SANISIDRO",
+    "LASAM",
+    "GATTARAN",
+    "SANTAMARIA",
+    "ROXAS",
+    "KAYAPA",
+    "ECHAGUE",
+    "RAMON",
+    "ARITAO",
+    "BAMBANG",
+    "REINAMERCEDES",
+]
+
+GULAYAN_EXCLUDED = {
+    "TUGUEGARAOCITY",
+    "ILAGANCITY",
+    "CAUAYANCITY",
+    "SANTIAGOCITY",
+}
+
+
+def selected_hvcdp_targets(activity, targets, physical, group_count):
+    activity_key = normalize_key(activity)
+    if activity_key == "GULAYANSABAYAN":
+        candidates = [key for key in targets if key not in GULAYAN_EXCLUDED]
+        target_count = int(round(group_count or physical or len(candidates)))
+        priority = [key for key in GULAYAN_PRIORITY if key in candidates]
+        remainder = [key for key in candidates if key not in priority]
+        return (priority + remainder)[:target_count]
+
+    target_count = int(round(group_count)) if group_count and group_count <= len(targets) else 0
+    if target_count > 0:
+        return targets[:target_count]
+    return targets
+
+
+def per_target_physical(activity, physical, target_count):
+    if target_count <= 0:
+        return 0
+    if normalize_key(activity) == "GULAYANSABAYAN":
+        return 1.0
+    return physical / target_count if physical else 0
+
+
 def is_hvcdp_aggregate_generic_detail(activity, context):
     activity_key = normalize_key(activity)
     context_key = normalize_key(context)
@@ -548,15 +598,20 @@ def extract_dedicated_hvcdp_rows(path, sheets, by_district):
                     continue
 
                 physical = to_number(cells[start])
+                group_count = to_number(cells[start + 1])
                 budget = to_number(cells[start + 5])
                 if not physical and not budget:
                     continue
                 if is_hvcdp_aggregate_generic_detail(activity, context):
                     continue
 
-                divisor = len(targets)
+                selected_targets = selected_hvcdp_targets(activity, targets, physical, group_count)
+                if not selected_targets:
+                    continue
+                divisor = len(selected_targets)
+                physical_per_target = per_target_physical(activity, physical, divisor)
                 display_activity = contextual_hvcdp_activity(activity, context)
-                for key in targets:
+                for key in selected_targets:
                     details.append({
                         "source_file": path.name,
                         "sheet": sheet_name,
@@ -567,7 +622,7 @@ def extract_dedicated_hvcdp_rows(path, sheets, by_district):
                         "program": "High Value Crops",
                         "activity": display_activity,
                         "unit": unit,
-                        "physical_target": format_number(physical / divisor) if physical else "",
+                        "physical_target": format_number(physical_per_target) if physical_per_target else "",
                         "budget": format_number(budget / divisor) if budget else "0.00",
                         "length_km": "",
                         "allocation_method": "district column municipalities split",
