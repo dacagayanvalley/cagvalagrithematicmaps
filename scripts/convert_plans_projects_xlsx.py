@@ -104,6 +104,26 @@ def normalize_key(value):
     return re.sub(r"[^A-Z0-9]", "", text)
 
 
+def normalize_district_code(value, province=""):
+    text = normalize_key(value)
+    province_key = normalize_key(province)
+    if not text:
+        return ""
+    if "LONE" in text or text == province_key:
+        return "LONE"
+    roman = re.search(r"\b(I|II|III|IV|V|VI)\b", clean_text(value).upper())
+    if roman:
+        return {"I": "1", "II": "2", "III": "3", "IV": "4", "V": "5", "VI": "6"}[roman.group(1)]
+    ordinal = re.search(r"(\d+)(ST|ND|RD|TH)?", text)
+    if ordinal:
+        return ordinal.group(1)
+    return text
+
+
+def district_lookup_key(province, district):
+    return (normalize_key(province), normalize_district_code(district, province))
+
+
 def read_shared_strings(archive):
     if "xl/sharedStrings.xml" not in archive.namelist():
         return []
@@ -172,6 +192,7 @@ def read_workbook(path):
 def load_municipalities(path):
     municipalities = {}
     by_province = defaultdict(dict)
+    by_district = defaultdict(dict)
     with Path(path).open(newline="", encoding="utf-8-sig") as file:
         for row in csv.DictReader(file):
             province = clean_text(row.get("province"))
@@ -179,8 +200,10 @@ def load_municipalities(path):
             if not province or not municipality:
                 continue
             key = normalize_key(municipality)
+            district = clean_text(row.get("district"))
             municipalities[key] = {"province": province, "municipality": municipality}
             by_province[normalize_key(province)][key] = municipality
+            by_district[district_lookup_key(province, district)][key] = municipality
 
     aliases = {
         "STAANA": "SANTAANA",
@@ -197,7 +220,7 @@ def load_municipalities(path):
         "SANTIAGO": "SANTIAGOCITY",
         "CITYOFSANTIAGO": "SANTIAGOCITY",
     }
-    return municipalities, by_province, aliases
+    return municipalities, by_province, by_district, aliases
 
 
 def match_direct_municipality(value, province_key, by_province, aliases):
@@ -286,13 +309,285 @@ def is_irrigation_program(activity):
     return any(term in text for term in ["IRRIGATION", "PUMP", "SOLAR-POWERED", "CANAL", "DIVERSION DAM"])
 
 
+def is_dedicated_hvcdp_file(path):
+    name = normalize_key(Path(path).stem)
+    return "FY2027HVCDP" in name or name == "HVCDP2027"
+
+
+def sheet_2027_columns(rows):
+    header_rows = rows[5:15]
+    start = None
+    end = None
+
+    for row in header_rows:
+        for idx, value in enumerate(row):
+            if "FY 2027" in clean_text(value).upper():
+                start = idx if start is None else min(start, idx)
+
+    if start is None:
+        return None
+
+    for row in header_rows:
+        for idx, value in enumerate(row):
+            text = clean_text(value).upper()
+            if idx > start and ("REMARK" in text or re.search(r"\bFY\s*20(2[89]|3\d)\b", text)):
+                end = idx if end is None else min(end, idx)
+
+    if end is None:
+        end = start + 8
+
+    physical_cols = []
+    budget_cols = []
+    for row in header_rows:
+        for idx in range(start, min(end, len(row))):
+            text = clean_text(row[idx]).upper()
+            if "PHYSICAL" in text:
+                physical_cols.append(idx)
+            if "BUDGET" in text:
+                budget_cols.append(idx)
+
+    if not physical_cols and not budget_cols:
+        physical_cols = list(range(start, end, 2))
+        budget_cols = list(range(start + 1, end, 2))
+
+    return {
+        "physical_cols": sorted(set(physical_cols)),
+        "budget_cols": sorted(set(budget_cols)),
+    }
+
+
+def value_from_columns(cells, cols):
+    if not cols:
+        return 0.0
+    total_col = cols[-1]
+    total_value = to_number(cells[total_col]) if total_col < len(cells) else 0.0
+    if total_value:
+        return total_value
+    tier_cols = cols[:-1] or cols
+    return sum(to_number(cells[col]) for col in tier_cols if col < len(cells))
+
+
+def fy2027_values(cells, columns):
+    if columns:
+        physical = value_from_columns(cells, columns["physical_cols"])
+        budget = value_from_columns(cells, columns["budget_cols"])
+        if physical or budget:
+            return physical, budget
+
+    physical = to_number(cells[10]) or to_number(cells[6]) + to_number(cells[8])
+    budget = to_number(cells[11]) or to_number(cells[7]) + to_number(cells[9])
+    if not physical and not budget:
+        physical = to_number(cells[6]) or to_number(cells[8])
+        budget = to_number(cells[7]) or to_number(cells[9])
+    return physical, budget
+
+
+def all_municipalities_marker(text):
+    normalized = normalize_key(text)
+    return "ALLMUNICIPAL" in normalized or "ALLMUNICIP" in normalized
+
+
+def province_from_sheet_name(sheet_name):
+    key = normalize_key(sheet_name)
+    provinces = {
+        "BATANES": "Batanes",
+        "CAGAYAN": "Cagayan",
+        "ISABELA": "Isabela",
+        "NUEVAVIZCAYA": "Nueva Vizcaya",
+        "QUIRINO": "Quirino",
+    }
+    return provinces.get(key, "")
+
+
+def hvcdp_district_blocks(rows, province, by_district):
+    header = rows[4] + [""] * 64 if len(rows) > 4 else []
+    blocks = []
+    district_blocks = []
+
+    for start in range(3, min(len(header), 64), 6):
+        label = clean_text(header[start])
+        label_key = normalize_key(label)
+        if not label or label_key in {"PROVINCEWIDE", "REGIONWIDE"} or label_key.startswith("PROVINCE") and label_key != "PROVINCE":
+            continue
+
+        if label_key == "PROVINCE":
+            district = "LONE"
+        else:
+            district = label.replace("DISTRICT", "").strip() or label
+
+        total_budget = sum(to_number((row + [""] * 64)[start + 5]) for row in rows[9:])
+        if total_budget <= 0:
+            continue
+
+        block = {
+            "start": start,
+            "label": label,
+            "district": district,
+            "targets": sorted(by_district.get(district_lookup_key(province, district), {})),
+        }
+        blocks.append(block)
+        if label_key != "PROVINCE":
+            district_blocks.append(block)
+
+    return district_blocks or blocks[:1]
+
+
+def is_hvcdp_detail_row(activity, unit):
+    key = normalize_key(activity)
+    if not key:
+        return False
+    skip_exact = {
+        "OPERATIONS",
+        "TECHNICALANDSUPPORTSEVICESPROGRAM",
+        "TECHNICALANDSUPPORTSERVICESPROGRAM",
+        "PRODUCTIONSUPPORTSERVICESSUBPROGRAM",
+        "OUTCOMEINDICATORS",
+        "OUTPUTINDICATORS",
+        "INPUTINDICATORS",
+        "RESEARCHANDDEVELOPMENTSUBPROGRAM",
+        "AGRICULTURALMACHINERYEQUIPMENTFACILITESANDINFRASTRUCTUREPROGRAM",
+        "AGRICULTURALMACHINERYEQUIPMENTANDFACILITIESSUPPORTSERVICESSUBPROGRAM",
+        "IRRIGATIONNETWORKSERVICESSUBPROGRAM",
+        "GRANDTOTAL",
+    }
+    skip_contains = [
+        "DISTRIBUTION",
+        "ESTABLISHMENT",
+        "SUPPORTSERVICES",
+        "ACTIVITIES",
+        "BENEFICIARIESRATING",
+        "DELIVERIESOF",
+        "LGUSASSISTED",
+    ]
+    if key in skip_exact:
+        return False
+    if not clean_text(unit):
+        return key.startswith("CONDUCT") or key.startswith("OTHERPROFESSIONALSERVICES")
+    if not clean_text(unit) and any(term in key for term in skip_contains):
+        return False
+    return True
+
+
+def is_hvcdp_context_heading(activity, unit):
+    key = normalize_key(activity)
+    if clean_text(unit) or not key:
+        return False
+    skip = {
+        "OPERATIONS",
+        "TECHNICALANDSUPPORTSEVICESPROGRAM",
+        "TECHNICALANDSUPPORTSERVICESPROGRAM",
+        "PRODUCTIONSUPPORTSERVICESSUBPROGRAM",
+        "OUTCOMEINDICATORS",
+        "OUTPUTINDICATORS",
+        "INPUTINDICATORS",
+        "GRANDTOTAL",
+    }
+    return key not in skip
+
+
+def contextual_hvcdp_activity(activity, context):
+    key = normalize_key(activity)
+    generic = {
+        "PROCURED",
+        "PRODUCED",
+        "DISTRIBUTED",
+        "AREAPLANTED",
+        "BENEFICIARIES",
+        "SERVICEAREA",
+        "NEW",
+        "CONTINUING",
+    }
+    if context and key in generic:
+        return f"{context} - {activity}"
+    return activity
+
+
+def is_hvcdp_aggregate_generic_detail(activity, context):
+    activity_key = normalize_key(activity)
+    context_key = normalize_key(context)
+    generic = {
+        "PROCURED",
+        "PRODUCED",
+        "DISTRIBUTED",
+        "AREAPLANTED",
+        "BENEFICIARIES",
+        "SERVICEAREA",
+    }
+    aggregate_context = [
+        "DISTRIBUTION",
+        "ESTABLISHMENT",
+        "SUPPORTSERVICES",
+        "ACTIVITIES",
+        "SUBPROGRAM",
+    ]
+    return activity_key in generic and any(term in context_key for term in aggregate_context)
+
+
+def extract_dedicated_hvcdp_rows(path, sheets, by_district):
+    details = []
+    for sheet_name, rows in sheets:
+        province = province_from_sheet_name(sheet_name)
+        if not province:
+            continue
+
+        for block in hvcdp_district_blocks(rows, province, by_district):
+            targets = block["targets"]
+            if not targets:
+                continue
+            start = block["start"]
+            district = block["district"]
+            context = ""
+
+            for row in rows[9:]:
+                cells = row + [""] * 64
+                activity = clean_text(cells[0])
+                unit = clean_text(cells[1])
+                if is_hvcdp_context_heading(activity, unit):
+                    context = activity
+                if not is_hvcdp_detail_row(activity, unit):
+                    continue
+
+                physical = to_number(cells[start])
+                budget = to_number(cells[start + 5])
+                if not physical and not budget:
+                    continue
+                if is_hvcdp_aggregate_generic_detail(activity, context):
+                    continue
+
+                divisor = len(targets)
+                display_activity = contextual_hvcdp_activity(activity, context)
+                for key in targets:
+                    details.append({
+                        "source_file": path.name,
+                        "sheet": sheet_name,
+                        "province": province,
+                        "district": district,
+                        "municipality": by_district[district_lookup_key(province, district)][key],
+                        "year": 2027,
+                        "program": "High Value Crops",
+                        "activity": display_activity,
+                        "unit": unit,
+                        "physical_target": format_number(physical / divisor) if physical else "",
+                        "budget": format_number(budget / divisor) if budget else "0.00",
+                        "length_km": "",
+                        "allocation_method": "district column municipalities split",
+                        "source_note": f"{sheet_name} {block['label']} FY 2027 HVCDP district column",
+                    })
+    return details
+
+
 def summarize_rows(files, municipal_csv):
-    _, by_province, aliases = load_municipalities(municipal_csv)
+    _, by_province, by_district, aliases = load_municipalities(municipal_csv)
     details = []
     unmatched = []
+    has_dedicated_hvcdp = any(is_dedicated_hvcdp_file(path) for path in files)
 
     for path in files:
         sheets = read_workbook(path)
+        if is_dedicated_hvcdp_file(path):
+            details.extend(extract_dedicated_hvcdp_rows(path, sheets, by_district))
+            continue
+
         province = ""
         province_key = ""
         for sheet_name, rows in sheets:
@@ -301,6 +596,9 @@ def summarize_rows(files, municipal_csv):
                 province_key = normalize_key(province)
             district = workbook_district(rows)
             program = classify_program(sheet_name, rows)
+            if has_dedicated_hvcdp and program == "High Value Crops":
+                continue
+            columns_2027 = sheet_2027_columns(rows)
             current_year = None
 
             for row in rows:
@@ -341,6 +639,9 @@ def summarize_rows(files, municipal_csv):
 
                 remarks = " ".join(cells[12:])
                 targets = find_municipalities(remarks, province_key, by_province, aliases)
+                is_all_district_municipalities = program == "High Value Crops" and all_municipalities_marker(remarks)
+                if is_all_district_municipalities:
+                    targets = sorted(by_district.get(district_lookup_key(province, district), {}))
                 if not targets:
                     continue
 
@@ -348,20 +649,17 @@ def summarize_rows(files, municipal_csv):
                 if activity.upper().startswith(("I.", "II.", "III.", "A.", "B.")):
                     continue
 
-                physical_2027 = to_number(cells[10]) or to_number(cells[6]) + to_number(cells[8])
-                budget_2027 = to_number(cells[11]) or to_number(cells[7]) + to_number(cells[9])
-                if not physical_2027 and not budget_2027:
-                    physical_2027 = to_number(cells[6]) or to_number(cells[8])
-                    budget_2027 = to_number(cells[7]) or to_number(cells[9])
+                physical_2027, budget_2027 = fy2027_values(cells, columns_2027)
 
                 divisor = len(targets) or 1
                 for key in targets:
+                    municipality = by_province[province_key].get(key) or by_district[district_lookup_key(province, district)].get(key)
                     details.append({
                         "source_file": path.name,
                         "sheet": sheet_name,
                         "province": province,
                         "district": district,
-                        "municipality": by_province[province_key][key],
+                        "municipality": municipality,
                         "year": 2027,
                         "program": program,
                         "activity": activity,
@@ -369,12 +667,14 @@ def summarize_rows(files, municipal_csv):
                         "physical_target": format_number(physical_2027 / divisor) if physical_2027 else "",
                         "budget": format_number(budget_2027 / divisor) if budget_2027 else "0.00",
                         "length_km": "",
-                        "allocation_method": "remarks municipality split",
+                        "allocation_method": "all district municipalities split" if is_all_district_municipalities else "remarks municipality split",
                         "source_note": remarks,
                     })
 
                 for token in re.split(r"[,;\n]| and ", remarks, flags=re.I):
                     token = clean_text(token)
+                    if all_municipalities_marker(token):
+                        continue
                     if token and not find_municipalities(token, province_key, by_province, aliases):
                         if re.search(r"[A-Za-z]{4,}", token):
                             unmatched.append({

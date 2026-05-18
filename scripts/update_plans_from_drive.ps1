@@ -16,7 +16,8 @@ $files = @(
   @{ Id = "18i2j_Wg2vOb7smQ4p8uJ9Y_VCfsm4mfI"; Name = "isabela_6.xlsx" },
   @{ Id = "1dlypllQ86CzVx2lmRPbLpt5s7F-TLx_7"; Name = "batanes.xlsx" },
   @{ Id = "1N3miSJqw4FLM9RzGvN-0BNxq103mSoEs"; Name = "nueva_vizcaya.xlsx" },
-  @{ Id = "1HoeKQWhCdikraeZrTZnLy9ahiyuNhc1D"; Name = "quirino.xlsx" }
+  @{ Id = "1HoeKQWhCdikraeZrTZnLy9ahiyuNhc1D"; Name = "quirino.xlsx" },
+  @{ Id = "1CkB9e_FlsgwW5mGNaPJP7AQqqxmPlmy_"; Name = "fy_2027_hvcdp.xlsx" }
 )
 
 foreach ($file in $files) {
