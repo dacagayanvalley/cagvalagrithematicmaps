@@ -83,8 +83,28 @@
 
         <section class="filter-section">
           <div class="section-label">Data Source</div>
+          <label for="version-filter">Dataset Timeline</label>
+          <select id="version-filter">
+            <option value="latest">Latest dataset</option>
+          </select>
           <div id="source-summary" class="source-summary">
             <div class="source-line">Loading source status...</div>
+          </div>
+        </section>
+
+        <section class="filter-section">
+          <div class="section-label">Version Compare</div>
+          <label for="compare-from">From</label>
+          <select id="compare-from">
+            <option value="">Need two versions</option>
+          </select>
+          <label for="compare-to">To</label>
+          <select id="compare-to">
+            <option value="">Need two versions</option>
+          </select>
+          <button class="compare-btn" id="compare-versions">Compare Versions</button>
+          <div id="version-compare" class="version-compare">
+            <div class="source-line">Archive another refresh to compare timelines.</div>
           </div>
         </section>
       </aside>
@@ -172,6 +192,6 @@
 
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="js/plansDashboard.js?v=20260511-xlsx"></script>
+  <script src="js/plansDashboard.js?v=20260518-versioned-plans"></script>
 </body>
 </html>

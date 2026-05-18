@@ -1,6 +1,7 @@
 import csv
 import json
 import re
+import shutil
 import sys
 import unicodedata
 import zipfile
@@ -301,7 +302,6 @@ def summarize_rows(files, municipal_csv):
             district = workbook_district(rows)
             program = classify_program(sheet_name, rows)
             current_year = None
-            sheet_start = len(details)
 
             for row in rows:
                 cells = row + [""] * (24 - len(row))
@@ -384,60 +384,7 @@ def summarize_rows(files, municipal_csv):
                                 "text": token,
                             })
 
-            append_sheet_total_rows(path.name, sheet_name, rows, province, district, program, details, sheet_start)
-
     return details, unmatched
-
-
-def append_sheet_total_rows(source_file, sheet_name, rows, province, district, program, details, sheet_start):
-    if program in {"Farm-to-Market Roads", "PRDP"}:
-        return
-
-    total_row = None
-    for row in rows:
-        first = normalize_key(row[0] if row else "")
-        if first in {"GRANDTOTAL", "TOTAL"}:
-            total_row = row + [""] * (24 - len(row))
-
-    if not total_row:
-        return
-
-    existing_years = {
-        int(row["year"])
-        for row in details[sheet_start:]
-        if row.get("source_file") == source_file and row.get("sheet") == sheet_name and row.get("year")
-    }
-    year_budget_cols = {
-        2025: 3,
-        2026: 5,
-        2027: 11,
-    }
-
-    for year, budget_col in year_budget_cols.items():
-        if year in existing_years:
-            continue
-        budget = to_number(total_row[budget_col]) if budget_col < len(total_row) else 0
-        if year == 2027 and not budget:
-            budget = to_number(total_row[7]) + to_number(total_row[9])
-        if not budget:
-            continue
-
-        details.append({
-            "source_file": source_file,
-            "sheet": sheet_name,
-            "province": province,
-            "district": district,
-            "municipality": "",
-            "year": year,
-            "program": program,
-            "activity": f"{program} district/province total",
-            "unit": "",
-            "physical_target": "",
-            "budget": format_number(budget),
-            "length_km": "",
-            "allocation_method": "district/province sheet total",
-            "source_note": "No municipal breakdown extracted for this year; retained as district/province commodity total.",
-        })
 
 
 def aggregate(details):
@@ -552,6 +499,71 @@ def write_metadata(path, source_dir, source_files, summary_count, detail_count):
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    return metadata
+
+
+def safe_version_id(value):
+    text = clean_text(value)
+    text = text.replace(":", "").replace("+", "-").replace("\\", "-").replace("/", "-")
+    return re.sub(r"[^0-9A-Za-zT._-]", "-", text)
+
+
+def relative_posix(path):
+    return path.as_posix()
+
+
+def write_version_snapshot(output, detail_output, metadata_output, unmatched_output, metadata):
+    version_root = Path("data/plans_versions")
+    version_id = safe_version_id(metadata.get("generated_at")) or datetime.now().strftime("%Y%m%dT%H%M%S")
+    version_dir = version_root / version_id
+    version_dir.mkdir(parents=True, exist_ok=True)
+
+    snapshot_files = {
+        "summary_url": version_dir / output.name,
+        "detail_url": version_dir / detail_output.name,
+        "metadata_url": version_dir / metadata_output.name,
+        "unmatched_url": version_dir / unmatched_output.name,
+    }
+
+    shutil.copy2(output, snapshot_files["summary_url"])
+    shutil.copy2(detail_output, snapshot_files["detail_url"])
+    shutil.copy2(metadata_output, snapshot_files["metadata_url"])
+    if unmatched_output.exists():
+        shutil.copy2(unmatched_output, snapshot_files["unmatched_url"])
+
+    manifest_path = version_root / "manifest.json"
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            manifest = {}
+    else:
+        manifest = {}
+
+    versions = [
+        item for item in manifest.get("versions", [])
+        if item.get("id") != version_id
+    ]
+    versions.append({
+        "id": version_id,
+        "label": metadata.get("generated_at", version_id),
+        "generated_at": metadata.get("generated_at"),
+        "latest_source_file_modified_at": metadata.get("latest_source_file_modified_at"),
+        "source_file_count": metadata.get("source_file_count", 0),
+        "summary_rows": metadata.get("summary_rows", 0),
+        "detail_rows": metadata.get("detail_rows", 0),
+        "summary_url": relative_posix(snapshot_files["summary_url"]),
+        "detail_url": relative_posix(snapshot_files["detail_url"]),
+        "metadata_url": relative_posix(snapshot_files["metadata_url"]),
+        "unmatched_url": relative_posix(snapshot_files["unmatched_url"]),
+    })
+    versions.sort(key=lambda item: item.get("generated_at") or item.get("id") or "", reverse=True)
+
+    manifest = {
+        "latest_version_id": versions[0]["id"] if versions else version_id,
+        "versions": versions,
+    }
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 def main():
@@ -560,6 +572,7 @@ def main():
     detail_output = Path(sys.argv[3]) if len(sys.argv) > 3 else Path("data/plans_projects_2025_2027_details.csv")
     municipal_csv = Path(sys.argv[4]) if len(sys.argv) > 4 else Path("data/municipal_data.csv")
     metadata_output = Path("data/plans_projects_metadata.json")
+    unmatched_output = Path("data/plans_projects_unmatched_terms.csv")
 
     files = sorted(source_dir.glob("*.xlsx"))
     if not files:
@@ -570,15 +583,15 @@ def main():
     summary = aggregate(details)
     write_csv(output, summary, SUMMARY_FIELDS)
     write_csv(detail_output, details, DETAIL_FIELDS)
-    write_metadata(metadata_output, source_dir, files, len(summary), len(details))
-    if unmatched:
-        write_csv(Path("data/plans_projects_unmatched_terms.csv"), unmatched, ["source_file", "sheet", "province", "text"])
+    write_csv(unmatched_output, unmatched, ["source_file", "sheet", "province", "text"])
+    metadata = write_metadata(metadata_output, source_dir, files, len(summary), len(details))
+    write_version_snapshot(output, detail_output, metadata_output, unmatched_output, metadata)
 
     print(f"Wrote {len(summary)} municipal planning rows to {output}")
     print(f"Wrote {len(details)} extracted planning detail rows to {detail_output}")
     print(f"Wrote planning metadata to {metadata_output}")
-    if unmatched:
-        print(f"Wrote {len(unmatched)} unmatched terms to data/plans_projects_unmatched_terms.csv")
+    print(f"Wrote {len(unmatched)} unmatched terms to {unmatched_output}")
+    print("Archived this refresh in data/plans_versions")
     return 0
 
 

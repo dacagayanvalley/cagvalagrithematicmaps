@@ -1,7 +1,8 @@
 const PlansDashboard = (() => {
-  const VERSION = "20260509-tabletools";
+  const VERSION = "20260518-versioned-plans";
   const DETAIL_URL = `data/plans_projects_2025_2027_details.csv?v=${VERSION}`;
   const METADATA_URL = `data/plans_projects_metadata.json?v=${VERSION}`;
+  const VERSION_MANIFEST_URL = `data/plans_versions/manifest.json?v=${VERSION}`;
 
   const COMMODITIES = [
     { key: "all", label: "All" },
@@ -39,6 +40,9 @@ const PlansDashboard = (() => {
   let tableSortField = "budget";
   let tableSortDir = "desc";
   let metadata = null;
+  let dataVersions = [];
+  let activeDataVersionId = "latest";
+  let compareRowsCache = new Map();
   let charts = {};
 
   const currency = new Intl.NumberFormat("en-PH", { maximumFractionDigits: 0 });
@@ -47,16 +51,22 @@ const PlansDashboard = (() => {
   function init() {
     document.body.dataset.theme = themeMode;
     bindEvents();
-    loadMetadata();
-    Papa.parse(DETAIL_URL, {
+    buildCommodityTabs();
+    loadVersionManifest().finally(loadDataset);
+  }
+
+  function loadDataset() {
+    const version = activeDataVersion();
+    rows = [];
+    loadMetadata(version.metadata_url);
+    Papa.parse(version.detail_url, {
       download: true,
       header: true,
       skipEmptyLines: true,
       complete: result => {
-        rows = result.data.map(normalizeRow);
+        rows = result.data.map(normalizeRow).filter(row => !isSummaryOnlyRow(row));
         buildProvinceFilter();
         updateGeographyFilters();
-        buildCommodityTabs();
         update();
       },
       error: err => {
@@ -66,9 +76,93 @@ const PlansDashboard = (() => {
     });
   }
 
-  async function loadMetadata() {
+  async function loadVersionManifest() {
     try {
-      const res = await fetch(METADATA_URL, { cache: "no-store" });
+      const res = await fetch(VERSION_MANIFEST_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const manifest = await res.json();
+      dataVersions = Array.isArray(manifest.versions) ? manifest.versions : [];
+      activeDataVersionId = manifest.latest_version_id || dataVersions[0]?.id || "latest";
+    } catch (err) {
+      dataVersions = [];
+      activeDataVersionId = "latest";
+    }
+    buildVersionFilter();
+  }
+
+  function activeDataVersion() {
+    const version = dataVersions.find(item => item.id === activeDataVersionId);
+    return {
+      id: version?.id || "latest",
+      detail_url: version?.detail_url ? cacheBusted(version.detail_url) : DETAIL_URL,
+      metadata_url: version?.metadata_url ? cacheBusted(version.metadata_url) : METADATA_URL,
+      generated_at: version?.generated_at || "",
+    };
+  }
+
+  function cacheBusted(url) {
+    return `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(VERSION)}`;
+  }
+
+  function buildVersionFilter() {
+    const select = document.getElementById("version-filter");
+    if (!select) return;
+
+    if (!dataVersions.length) {
+      select.innerHTML = `<option value="latest">Latest dataset</option>`;
+      select.value = "latest";
+      select.disabled = true;
+      buildCompareControls();
+      return;
+    }
+
+    select.disabled = false;
+    select.innerHTML = dataVersions.map(version => {
+      return `<option value="${escapeHTML(version.id)}">${escapeHTML(versionOptionLabel(version))}</option>`;
+    }).join("");
+    select.value = activeDataVersionId;
+    buildCompareControls();
+  }
+
+  function versionOptionLabel(version) {
+    const generated = formatTimestamp(version.generated_at);
+    const sourceTime = formatTimestamp(version.latest_source_file_modified_at);
+    const records = formatNumber(version.detail_rows || 0);
+    return `${generated} - ${records} records - source ${sourceTime}`;
+  }
+
+  function buildCompareControls() {
+    const fromSelect = document.getElementById("compare-from");
+    const toSelect = document.getElementById("compare-to");
+    const button = document.getElementById("compare-versions");
+    const output = document.getElementById("version-compare");
+    if (!fromSelect || !toSelect || !button || !output) return;
+
+    if (dataVersions.length < 2) {
+      fromSelect.innerHTML = `<option value="">Need two versions</option>`;
+      toSelect.innerHTML = `<option value="">Need two versions</option>`;
+      fromSelect.disabled = true;
+      toSelect.disabled = true;
+      button.disabled = true;
+      output.innerHTML = `<div class="source-line">Archive another refresh to compare timelines.</div>`;
+      return;
+    }
+
+    const options = dataVersions.map(version =>
+      `<option value="${escapeHTML(version.id)}">${escapeHTML(versionOptionLabel(version))}</option>`
+    ).join("");
+    fromSelect.innerHTML = options;
+    toSelect.innerHTML = options;
+    fromSelect.disabled = false;
+    toSelect.disabled = false;
+    button.disabled = false;
+    fromSelect.value = dataVersions[1]?.id || dataVersions[0].id;
+    toSelect.value = dataVersions[0].id;
+  }
+
+  async function loadMetadata(url = METADATA_URL) {
+    try {
+      const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       metadata = await res.json();
       renderMetadata();
@@ -82,12 +176,14 @@ const PlansDashboard = (() => {
     if (!metadata) return;
     const generated = formatTimestamp(metadata.generated_at);
     const latest = formatTimestamp(metadata.latest_source_file_modified_at);
+    const version = dataVersions.find(item => item.id === activeDataVersionId);
     const link = metadata.source_folder_url
       ? `<a href="${escapeHTML(metadata.source_folder_url)}" target="_blank" rel="noopener">Google Drive folder</a>`
       : "Google Drive folder";
 
     document.getElementById("source-summary").innerHTML = `
       <div class="source-line"><strong>${escapeHTML(metadata.source || "Planning workbooks")}</strong></div>
+      ${version ? `<div class="source-line">Selected timeline: ${escapeHTML(formatTimestamp(version.generated_at))}</div>` : ""}
       <div class="source-line">Dashboard data refreshed: ${escapeHTML(generated)}</div>
       <div class="source-line">Latest downloaded workbook timestamp: ${escapeHTML(latest)}</div>
       <div class="source-line">${formatNumber(metadata.source_file_count || 0)} workbooks, ${formatNumber(metadata.detail_rows || 0)} records</div>
@@ -113,6 +209,19 @@ const PlansDashboard = (() => {
         row.district, row.unit, row.source_note, row.source_file, row.sheet
       ].join(" ").toLowerCase()
     };
+  }
+
+  function isSummaryOnlyRow(row) {
+    const allocation = String(row.allocation_method || "").toLowerCase();
+    const activity = String(row.activity || "").toLowerCase();
+    const program = String(row.program || "").trim().toUpperCase();
+    const sourceNote = String(row.source_note || "").toLowerCase();
+    const municipality = String(row.municipality || "").trim();
+
+    if (allocation === "district/province sheet total") return true;
+    if (!municipality && activity.includes("district/province total")) return true;
+    if (!municipality && sourceNote.includes("district/province commodity total")) return true;
+    return !municipality && ["GRAND TOTAL", "2025-2027"].includes(program);
   }
 
   function parseNumber(value) {
@@ -176,6 +285,26 @@ const PlansDashboard = (() => {
       chartType = event.target.value;
       update();
     });
+
+    const versionFilter = document.getElementById("version-filter");
+    if (versionFilter) {
+      versionFilter.addEventListener("change", event => {
+        activeDataVersionId = event.target.value;
+        provinceFilter = "all";
+        districtFilter = "all";
+        municipalityFilter = "all";
+        searchTerm = "";
+        activitySearchTerm = "";
+        document.getElementById("search-filter").value = "";
+        document.getElementById("activity-search").value = "";
+        loadDataset();
+      });
+    }
+
+    const compareButton = document.getElementById("compare-versions");
+    if (compareButton) {
+      compareButton.addEventListener("click", compareSelectedVersions);
+    }
 
     document.querySelectorAll("[data-theme-mode]").forEach(button => {
       button.addEventListener("click", event => {
@@ -520,6 +649,203 @@ const PlansDashboard = (() => {
         <td>${escapeHTML(row.source_file)}</td>
       </tr>
     `).join("");
+  }
+
+  async function compareSelectedVersions() {
+    const fromId = document.getElementById("compare-from")?.value;
+    const toId = document.getElementById("compare-to")?.value;
+    const output = document.getElementById("version-compare");
+    if (!output) return;
+
+    if (!fromId || !toId || dataVersions.length < 2) {
+      output.innerHTML = `<div class="source-line source-warn">At least two archived versions are needed.</div>`;
+      return;
+    }
+    if (fromId === toId) {
+      output.innerHTML = `<div class="source-line source-warn">Choose two different versions to compare.</div>`;
+      return;
+    }
+
+    output.innerHTML = `<div class="source-line">Comparing archived datasets...</div>`;
+    try {
+      const [fromRows, toRows] = await Promise.all([
+        loadCompareRows(fromId),
+        loadCompareRows(toId)
+      ]);
+      renderVersionComparison(fromId, toId, compareRows(fromRows, toRows));
+    } catch (err) {
+      output.innerHTML = `<div class="source-line source-warn">Comparison failed: ${escapeHTML(err.message || err)}</div>`;
+    }
+  }
+
+  function loadCompareRows(versionId) {
+    if (compareRowsCache.has(versionId)) return Promise.resolve(compareRowsCache.get(versionId));
+    const version = dataVersions.find(item => item.id === versionId);
+    if (!version?.detail_url) return Promise.reject(new Error("Version detail CSV is unavailable."));
+
+    return new Promise((resolve, reject) => {
+      Papa.parse(cacheBusted(version.detail_url), {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: result => {
+          const normalized = result.data.map(normalizeRow).filter(row => !isSummaryOnlyRow(row));
+          compareRowsCache.set(versionId, normalized);
+          resolve(normalized);
+        },
+        error: reject
+      });
+    });
+  }
+
+  function compareRows(fromRows, toRows) {
+    const fromMap = aggregateCompareRows(fromRows);
+    const toMap = aggregateCompareRows(toRows);
+    const added = [];
+    const deleted = [];
+    const changed = [];
+    let fromBudget = 0;
+    let toBudget = 0;
+
+    fromMap.forEach(item => { fromBudget += item.budget; });
+    toMap.forEach(item => { toBudget += item.budget; });
+
+    toMap.forEach((toItem, key) => {
+      const fromItem = fromMap.get(key);
+      if (!fromItem) {
+        added.push(toItem);
+        return;
+      }
+
+      const delta = {
+        row: toItem.row,
+        fromBudget: fromItem.budget,
+        toBudget: toItem.budget,
+        budgetDelta: toItem.budget - fromItem.budget,
+        physicalDelta: toItem.physical - fromItem.physical,
+        lengthDelta: toItem.length - fromItem.length,
+        countDelta: toItem.count - fromItem.count,
+      };
+      if (
+        Math.abs(delta.budgetDelta) >= 0.01 ||
+        Math.abs(delta.physicalDelta) >= 0.01 ||
+        Math.abs(delta.lengthDelta) >= 0.01 ||
+        delta.countDelta !== 0
+      ) {
+        changed.push(delta);
+      }
+    });
+
+    fromMap.forEach((fromItem, key) => {
+      if (!toMap.has(key)) deleted.push(fromItem);
+    });
+
+    changed.sort((a, b) => Math.abs(b.budgetDelta) - Math.abs(a.budgetDelta));
+    added.sort((a, b) => b.budget - a.budget);
+    deleted.sort((a, b) => b.budget - a.budget);
+
+    return {
+      added,
+      deleted,
+      changed,
+      fromCount: fromRows.length,
+      toCount: toRows.length,
+      fromBudget,
+      toBudget,
+      budgetDelta: toBudget - fromBudget,
+    };
+  }
+
+  function aggregateCompareRows(data) {
+    const map = new Map();
+    data.forEach(row => {
+      const key = compareKey(row);
+      const item = map.get(key) || {
+        row,
+        count: 0,
+        budget: 0,
+        physical: 0,
+        length: 0,
+      };
+      item.count += 1;
+      item.budget += row.budgetValue || 0;
+      item.physical += row.physicalValue || 0;
+      item.length += row.lengthValue || 0;
+      map.set(key, item);
+    });
+    return map;
+  }
+
+  function compareKey(row) {
+    return [
+      row.source_file,
+      row.sheet,
+      row.province,
+      row.district,
+      row.municipality,
+      row.year,
+      row.program,
+      row.activity,
+      row.unit,
+      row.allocation_method
+    ].map(value => String(value || "").trim().toLowerCase()).join("|");
+  }
+
+  function renderVersionComparison(fromId, toId, comparison) {
+    const output = document.getElementById("version-compare");
+    const fromVersion = dataVersions.find(item => item.id === fromId);
+    const toVersion = dataVersions.find(item => item.id === toId);
+    const changedItems = comparison.changed.slice(0, 5).map(item =>
+      compareItemHTML(item.row, item.budgetDelta, `${formatSigned(item.budgetDelta)} PHP '000`)
+    ).join("");
+    const addedItems = comparison.added.slice(0, 3).map(item =>
+      compareItemHTML(item.row, item.budget, `+${formatNumber(item.budget)} PHP '000`)
+    ).join("");
+    const deletedItems = comparison.deleted.slice(0, 3).map(item =>
+      compareItemHTML(item.row, -item.budget, `-${formatNumber(item.budget)} PHP '000`)
+    ).join("");
+
+    output.innerHTML = `
+      <div class="source-line"><strong>${escapeHTML(formatTimestamp(fromVersion?.generated_at))} to ${escapeHTML(formatTimestamp(toVersion?.generated_at))}</strong></div>
+      <div class="compare-metrics">
+        ${compareMetricHTML("Added", comparison.added.length)}
+        ${compareMetricHTML("Deleted", comparison.deleted.length)}
+        ${compareMetricHTML("Changed", comparison.changed.length)}
+        ${compareMetricHTML("Budget delta", formatSigned(comparison.budgetDelta))}
+      </div>
+      <div class="source-line">Records: ${formatNumber(comparison.fromCount)} to ${formatNumber(comparison.toCount)}</div>
+      <div class="source-line">Budget: ${formatNumber(comparison.fromBudget)} to ${formatNumber(comparison.toBudget)} PHP '000</div>
+      ${changedItems ? `<div class="compare-list"><div class="source-line"><strong>Largest Changes</strong></div>${changedItems}</div>` : ""}
+      ${addedItems ? `<div class="compare-list"><div class="source-line"><strong>Added</strong></div>${addedItems}</div>` : ""}
+      ${deletedItems ? `<div class="compare-list"><div class="source-line"><strong>Deleted</strong></div>${deletedItems}</div>` : ""}
+      ${!changedItems && !addedItems && !deletedItems ? `<div class="source-line">No record-level changes detected.</div>` : ""}
+    `;
+  }
+
+  function compareMetricHTML(label, value) {
+    return `
+      <div class="compare-metric">
+        <span>${escapeHTML(label)}</span>
+        <strong>${escapeHTML(value)}</strong>
+      </div>
+    `;
+  }
+
+  function compareItemHTML(row, delta, deltaText) {
+    const deltaClass = delta >= 0 ? "compare-delta-pos" : "compare-delta-neg";
+    return `
+      <div class="compare-item">
+        <strong>${escapeHTML(row.municipality || row.displayMunicipality)}, ${escapeHTML(row.province)}</strong>
+        <div>${escapeHTML(row.year)} - ${escapeHTML(row.program)}</div>
+        <div>${escapeHTML(row.activity || row.source_note || "")}</div>
+        <div class="${deltaClass}">${escapeHTML(deltaText)}</div>
+      </div>
+    `;
+  }
+
+  function formatSigned(value) {
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${formatNumber(value)}`;
   }
 
   function filterActivityRows(data) {
