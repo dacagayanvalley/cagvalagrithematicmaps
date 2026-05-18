@@ -9,6 +9,7 @@ const PlansDashboard = (() => {
     { key: "rice", label: "Rice", programs: ["Rice Program"] },
     { key: "corn", label: "Corn", programs: ["Corn Program"] },
     { key: "hvc", label: "High Value Crops", programs: ["High Value Crops"] },
+    { key: "oap", label: "OAP", programs: ["OAP"] },
     { key: "nupap", label: "NUPAP", programs: ["NUPAP"] },
     { key: "livestock", label: "Livestock", programs: ["LIVESTOCK"] },
     { key: "fmr", label: "FMR", programs: ["Farm-to-Market Roads"] },
@@ -18,7 +19,7 @@ const PlansDashboard = (() => {
     { key: "mcra", label: "MCRA", programs: ["MCRA"] },
     { key: "nshp", label: "NSHP", programs: ["National Soil Health"] },
     { key: "halal", label: "HALAL", programs: ["HALAL"] },
-    { key: "other", label: "Other", programs: ["OAP", "COLD STORAGE", "2024-2026"] }
+    { key: "other", label: "Other", programs: ["COLD STORAGE", "2024-2026", "Research and Development (R4)", "F2C2"] }
   ];
 
   const YEAR_LABELS = {
@@ -204,8 +205,13 @@ const PlansDashboard = (() => {
       budgetValue: parseNumber(row.budget),
       lengthValue: parseNumber(row.length_km),
       physicalValue: parseNumber(row.physical_target),
+      commodityLabel: row.commodity || row.program || "",
+      officeFunction: row.office_function || row.tier_2 || "",
+      tier1: row.tier_1 || "",
+      tier2: row.tier_2 || row.office_function || "",
       searchText: [
         row.province, row.municipality, row.program, row.activity,
+        row.commodity, row.office_function, row.tier_1, row.tier_2,
         row.district, row.unit, row.source_note, row.source_file, row.sheet
       ].join(" ").toLowerCase()
     };
@@ -500,6 +506,8 @@ const PlansDashboard = (() => {
     renderCategoryChart("province-chart", groupBudget(data, "province").slice(0, 8), "Budget", "#1a6b3c");
     renderCategoryChart("district-chart", groupBudget(data, "district").slice(0, 12), "Budget", "#b45309");
     renderCategoryChart("municipality-chart", groupBudget(data, "municipality").slice(0, 10), "Budget", "#2e7d9a");
+    renderCategoryChart("tier1-chart", groupBudget(data, "tier1").slice(0, 8), "Budget", "#7c3aed");
+    renderCategoryChart("tier2-chart", groupBudget(data, "tier2").slice(0, 8), "Budget", "#0f766e");
     renderYearChart();
   }
 
@@ -510,6 +518,10 @@ const PlansDashboard = (() => {
         ? row.displayMunicipality
         : field === "district"
           ? districtLabel(row)
+          : field === "tier1"
+            ? (row.tier1 || "Unspecified Tier 1")
+            : field === "tier2"
+              ? (row.tier2 || "Unspecified Tier 2")
           : (row[field] || "Unspecified");
       map.set(key, (map.get(key) || 0) + row.budgetValue);
     });
@@ -615,6 +627,8 @@ const PlansDashboard = (() => {
     } else {
       notes.push(["", `${formatNumber(data.length)} records are tagged to ${municipalities.size} municipality/province combinations for this lens.`]);
       if (topProgram) notes.push(["", `${topProgram.label} carries the largest tagged budget at ${formatNumber(topProgram.value)} PHP '000.`]);
+      const topTier2 = groupBudget(data, "tier2")[0];
+      if (activeYear === "2027" && topTier2) notes.push(["", `${topTier2.label} is the largest Tier 2/function grouping at ${formatNumber(topTier2.value)} PHP '000.`]);
       const topDistrict = groupBudget(data, "district")[0];
       if (topDistrict) notes.push(["", `${topDistrict.label} is the top district grouping for this lens at ${formatNumber(topDistrict.value)} PHP '000.`]);
       if (activeYear === "2027") notes.push(["warn", "Use this view to compare proposed allocations with the need-gap layer in the decision map before realignment."]);
@@ -642,7 +656,8 @@ const PlansDashboard = (() => {
         <td>${escapeHTML(row.displayDistrict || formatDistrict(row.district))}</td>
         <td>${escapeHTML(row.displayMunicipality)}</td>
         <td>${escapeHTML(row.year)}</td>
-        <td>${escapeHTML(row.program)}</td>
+        <td>${escapeHTML(row.program)}${row.commodityLabel && row.commodityLabel !== row.program ? `<div class="muted">${escapeHTML(row.commodityLabel)}</div>` : ""}</td>
+        <td>${escapeHTML(row.tier1 || "")}<div class="muted">${escapeHTML(row.tier2 || "")}</div></td>
         <td class="activity-cell">${escapeHTML(row.activity || row.source_note || "")}<div class="muted">${escapeHTML(row.unit || "")}</div></td>
         <td>${formatNumber(row.budgetValue)}</td>
         <td>${row.lengthValue ? formatDecimal(row.lengthValue) + " km" : ""}</td>
@@ -785,6 +800,9 @@ const PlansDashboard = (() => {
       row.municipality,
       row.year,
       row.program,
+      row.commodityLabel,
+      row.tier1,
+      row.tier2,
       row.activity,
       row.unit,
       row.allocation_method
@@ -855,6 +873,9 @@ const PlansDashboard = (() => {
       row.source_note,
       row.unit,
       row.program,
+      row.commodityLabel,
+      row.tier1,
+      row.tier2,
       row.displayMunicipality,
       row.displayDistrict
     ].join(" ").toLowerCase().includes(activitySearchTerm));
@@ -880,6 +901,7 @@ const PlansDashboard = (() => {
       municipality: row.displayMunicipality,
       year: parseNumber(row.year),
       program: row.program,
+      function: row.tier2 || row.officeFunction,
       activity: row.activity || row.source_note || "",
       budget: row.budgetValue,
       length: row.lengthValue,
@@ -999,7 +1021,7 @@ const PlansDashboard = (() => {
 
   function toCSV(data) {
     if (!data.length) return "";
-    const fields = ["province", "district", "municipality", "year", "program", "activity", "unit", "physical_target", "budget", "length_km", "source_file", "sheet", "allocation_method"];
+    const fields = ["province", "district", "municipality", "year", "program", "commodity", "tier_1", "tier_2", "activity", "unit", "physical_target", "budget", "length_km", "source_file", "sheet", "allocation_method"];
     const quote = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
     return [fields.join(",")]
       .concat(data.map(row => fields.map(field => quote(row[field])).join(",")))

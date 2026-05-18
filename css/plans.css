@@ -400,7 +400,7 @@ body[data-theme="dark"] .kpi-card strong {
 .analysis-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(5, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 10px;
 }
 

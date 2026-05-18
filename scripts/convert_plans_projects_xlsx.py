@@ -49,6 +49,10 @@ DETAIL_FIELDS = [
     "municipality",
     "year",
     "program",
+    "commodity",
+    "office_function",
+    "tier_1",
+    "tier_2",
     "activity",
     "unit",
     "physical_target",
@@ -57,6 +61,68 @@ DETAIL_FIELDS = [
     "allocation_method",
     "source_note",
 ]
+
+ALL_PROGRAMS_FILE_KEY = "ALLPROGRAMS2027"
+PRESERVE_LEGACY_2027_PROGRAMS = {
+    "Farm-to-Market Roads",
+    "4Ks",
+    "PRDP",
+    "SAAD",
+    "National Soil Health",
+    "HALAL",
+}
+
+PROGRAM_BY_SHEET = {
+    "IES": "Rice Program",
+    "SCRCSEEDSYSTEMHIGHIMPACT": "Research and Development (R4)",
+    "RICE": "Rice Program",
+    "CORN": "Corn Program",
+    "HVCDP": "High Value Crops",
+    "HVCDPEXPORT": "High Value Crops",
+    "HVCDPCOFFEE": "High Value Crops",
+    "LIVESTOCK": "LIVESTOCK",
+    "OAP": "OAP",
+    "NUPAP": "NUPAP",
+    "4KS": "4Ks",
+    "SAAD": "SAAD",
+    "MCRA": "MCRA",
+    "F2C2": "F2C2",
+}
+
+COMMODITY_BY_SHEET = {
+    "IES": "Rice Seed System",
+    "SCRCSEEDSYSTEMHIGHIMPACT": "Rice and Vegetable Seed System",
+    "RICE": "Rice",
+    "CORN": "Corn",
+    "HVCDP": "Legumes, Spices, Vegetable, Bamboo",
+    "HVCDPEXPORT": "Ube, Dragon Fruit, Okra, Banana",
+    "HVCDPCOFFEE": "Coffee",
+    "LIVESTOCK": "Livestock",
+    "OAP": "Organic Agriculture",
+    "NUPAP": "Urban and Peri-Urban Agriculture",
+    "4KS": "4Ks",
+    "SAAD": "SAAD",
+    "MCRA": "MCRA",
+    "F2C2": "F2C2",
+}
+
+FUNCTION_ALIASES = {
+    "PSS": ("Technical Support Services", "Production Support Services"),
+    "PRODUCTIONSUPPORTSERVICES": ("Technical Support Services", "Production Support Services"),
+    "PRODUCTIONSUPPORTSERVICESSUBPROGRAM": ("Technical Support Services", "Production Support Services"),
+    "ESETS": ("Technical Support Services", "Extension Support, Education and Training Services"),
+    "EXTENSIONSUPPORTEDUCATIONANDTRAINING": ("Technical Support Services", "Extension Support, Education and Training Services"),
+    "EXTENSIONSUPPORTEDUCATIONANDTRAININGSERVICES": ("Technical Support Services", "Extension Support, Education and Training Services"),
+    "MARKETDEVELOPMENTSERVICES": ("Other Functions", "Market Development Services"),
+    "MARKETLINKAGEANDFACILITATION": ("Other Functions", "Market Development Services"),
+    "R4": ("Other Functions", "Research and Development (R4)"),
+    "RESEARCHANDDEVELOPMENT": ("Other Functions", "Research and Development (R4)"),
+    "AMEFS": ("Other Functions", "AMEFIP"),
+    "AMEFIP": ("Other Functions", "AMEFIP"),
+    "INS": ("Other Functions", "AMEFIP"),
+    "IRRIGATIONNETWORKSERVICES": ("Other Functions", "AMEFIP"),
+    "REGULATORYSERVICES": ("Other Functions", "Regulatory Services"),
+}
 
 
 def column_index(cell_ref):
@@ -219,6 +285,13 @@ def load_municipalities(path):
         "CITYOFCAUAYAN": "CAUAYANCITY",
         "SANTIAGO": "SANTIAGOCITY",
         "CITYOFSANTIAGO": "SANTIAGOCITY",
+        "REYNAMERCEDES": "REINAMERCEDES",
+        "TUMAINI": "TUMAUINI",
+        "PEAABLANCA": "PEABLANCA",
+        "PENABLANCA": "PEABLANCA",
+        "NAGUILLAN": "NAGUILIAN",
+        "STONINO": "SANTONIOFAIRE",
+        "SANTONINO": "SANTONIOFAIRE",
     }
     return municipalities, by_province, by_district, aliases
 
@@ -297,6 +370,269 @@ def classify_program(sheet_name, rows):
     if "MCRA" in haystack:
         return "MCRA"
     return clean_text(sheet_name) or "Other Program"
+
+
+def is_all_programs_file(path):
+    return ALL_PROGRAMS_FILE_KEY in normalize_key(Path(path).stem)
+
+
+def preserve_legacy_2027_program(program):
+    return clean_text(program) in PRESERVE_LEGACY_2027_PROGRAMS
+
+
+def default_detail_fields(row):
+    row.setdefault("commodity", "")
+    row.setdefault("office_function", "")
+    row.setdefault("tier_1", "")
+    row.setdefault("tier_2", "")
+    return row
+
+
+def all_programs_sheet_key(sheet_name):
+    return normalize_key(sheet_name)
+
+
+def all_programs_sheet_program(sheet_name):
+    key = all_programs_sheet_key(sheet_name)
+    return PROGRAM_BY_SHEET.get(key, clean_text(sheet_name) or "Other Program")
+
+
+def all_programs_sheet_commodity(sheet_name, rows):
+    key = all_programs_sheet_key(sheet_name)
+    for row in rows[:8]:
+        text = " ".join(clean_text(cell) for cell in row[:4])
+        match = re.search(r"COMMODITY:\s*(.+)", text, flags=re.I)
+        if match:
+            commodity = clean_text(match.group(1))
+            if commodity:
+                return commodity
+    return COMMODITY_BY_SHEET.get(key, all_programs_sheet_program(sheet_name))
+
+
+def normalize_all_programs_function(value, fallback=None):
+    key = normalize_key(value)
+    if key in FUNCTION_ALIASES:
+        return FUNCTION_ALIASES[key]
+    if fallback:
+        return fallback
+    return ("Technical Support Services", "Production Support Services")
+
+
+def is_all_programs_heading(row):
+    activity = clean_text((row + [""])[0])
+    joined = normalize_key(" ".join(row[:4]))
+    if not activity:
+        return False
+    if activity.startswith("Column "):
+        return False
+    if joined in FUNCTION_ALIASES:
+        return True
+    if to_number((row + [""] * 5)[4]) and not clean_text((row + [""] * 7)[6]):
+        return True
+    return False
+
+
+def province_district_from_text(value, default_province=""):
+    text = clean_text(value)
+    key = normalize_key(text)
+    provinces = {
+        "BATANES": "Batanes",
+        "CAGAYAN": "Cagayan",
+        "ISABELA": "Isabela",
+        "NUEVAVIZCAYA": "Nueva Vizcaya",
+        "QUIRINO": "Quirino",
+    }
+
+    province = default_province
+    for province_key, province_name in provinces.items():
+        if province_key in key:
+            province = province_name
+            break
+
+    district = ""
+    district_match = re.search(r"(?:DISTRICT|D)\s*[- ]*(LONE|I{1,3}|IV|V?I|\d+)", text, flags=re.I)
+    if not district_match:
+        district_match = re.search(r"(\d+)(?:ST|ND|RD|TH)?\s+DISTRICT", text, flags=re.I)
+    if district_match:
+        district = district_match.group(1)
+    elif province in {"Batanes", "Nueva Vizcaya", "Quirino"}:
+        district = "LONE"
+    elif "LONE" in key:
+        district = "LONE"
+
+    return province, normalize_district_code(district, province) or district
+
+
+def split_location_terms(text):
+    cleaned = clean_text(text)
+    cleaned = re.sub(r"\b(Cagayan|Isabela|Nueva Vizcaya|Quirino|Batanes)\b", "", cleaned, flags=re.I)
+    cleaned = cleaned.replace("/", ",")
+    cleaned = cleaned.replace("&", ",")
+    cleaned = re.sub(r"\band\b", ",", cleaned, flags=re.I)
+    return [clean_text(token) for token in re.split(r"[,;]", cleaned) if clean_text(token)]
+
+
+def all_program_targets(location, province, district, by_province, by_district, aliases):
+    province_key = normalize_key(province)
+    location_key = normalize_key(location)
+    district_key = district_lookup_key(province, district)
+
+    if location_key in {"REGION", "REGIONAL"}:
+        location_key = "REGIONWIDE"
+
+    if "REGIONWIDE" in location_key:
+        targets = []
+        for mun_map in by_province.values():
+            targets.extend(mun_map.values())
+        return sorted(set(targets))
+
+    if "PROVINCEWIDE" in location_key or "ALLMUNICIPAL" in location_key or location_key == province_key:
+        targets = by_province.get(province_key, {})
+        if "EXCEPTCITY" in location_key:
+            return sorted(value for key, value in targets.items() if "CITY" not in key)
+        return sorted(set(targets.values()))
+
+    if "DISTRICTWIDE" in location_key:
+        district_targets = by_district.get(district_key, {})
+        if district_targets:
+            return sorted(set(district_targets.values()))
+        return sorted(set(by_province.get(province_key, {}).values()))
+
+    targets = []
+    for token in split_location_terms(location):
+        token_key = match_direct_municipality(token, province_key, by_province, aliases)
+        if token_key:
+            targets.append(by_province[province_key][token_key])
+            continue
+        found = find_municipalities(token, province_key, by_province, aliases)
+        targets.extend(by_province[province_key][key] for key in found if key in by_province[province_key])
+
+    if not targets:
+        for key in find_municipalities(location, province_key, by_province, aliases):
+            targets.append(by_province[province_key][key])
+
+    return sorted(set(targets))
+
+
+def contextual_activity(activity, context):
+    activity = clean_text(activity)
+    context = clean_text(context)
+    if context and normalize_key(activity) in {"SEEDS", "LIQUIDFERTIZER", "LIQUIDFERTILIZER", "FERTILIZER"}:
+        return f"{context} - {activity}"
+    return activity
+
+
+def extract_all_programs_rows(path, sheets, by_province, by_district, aliases):
+    details = []
+    unmatched = []
+
+    for sheet_name, rows in sheets:
+        program = all_programs_sheet_program(sheet_name)
+        commodity = all_programs_sheet_commodity(sheet_name, rows)
+        has_district_column = any(
+            "PROVINCE AND DISTRICT" in clean_text(cell).upper()
+            for row in rows[:10]
+            for cell in row
+        )
+        district_idx = 2 if has_district_column else None
+        physical_idx = 3 if has_district_column else 2
+        budget_idx = 4 if has_district_column else 3
+        location_idx = 6 if has_district_column else 5
+        readiness_idx = 7 if has_district_column else 6
+        kra_idx = 8 if has_district_column else 7
+        alignment_idx = 13 if has_district_column else 12
+        current_activity = ""
+        current_description = ""
+        current_context = ""
+        current_function = normalize_all_programs_function("")
+
+        for row in rows[8:]:
+            cells = row + [""] * 14
+            activity_cell = clean_text(cells[0])
+            if not activity_cell or activity_cell.startswith("Column "):
+                continue
+            if activity_cell.startswith("(") and activity_cell.endswith(")"):
+                continue
+
+            if is_all_programs_heading(cells):
+                maybe_function = normalize_all_programs_function(activity_cell, None)
+                if normalize_key(activity_cell) in FUNCTION_ALIASES:
+                    current_function = maybe_function
+                else:
+                    current_context = activity_cell
+                continue
+
+            district_text = clean_text(cells[district_idx]) if district_idx is not None else ""
+            location = clean_text(cells[location_idx])
+            budget = to_number(cells[budget_idx])
+            physical = to_number(cells[physical_idx])
+            if not district_text and not location and budget:
+                current_context = activity_cell
+                continue
+            if not budget and not physical and not location:
+                continue
+
+            if activity_cell:
+                current_activity = contextual_activity(activity_cell, current_context)
+                current_description = clean_text(cells[1])
+            activity = current_activity or contextual_activity(activity_cell, current_context)
+            if not activity:
+                continue
+
+            province, district = province_district_from_text(district_text)
+            if not province:
+                province, district = province_district_from_text(location)
+            if not province:
+                unmatched.append({
+                    "source_file": path.name,
+                    "sheet": sheet_name,
+                    "province": "",
+                    "text": district_text or location or activity,
+                })
+                continue
+
+            targets = all_program_targets(location, province, district, by_province, by_district, aliases)
+            if not targets:
+                unmatched.append({
+                    "source_file": path.name,
+                    "sheet": sheet_name,
+                    "province": province,
+                    "text": location or district_text or activity,
+                })
+                continue
+
+            divisor = len(targets) or 1
+            tier_1, tier_2 = current_function
+            source_bits = [
+                current_description,
+                clean_text(cells[readiness_idx]),
+                clean_text(cells[kra_idx]),
+                clean_text(cells[alignment_idx]),
+            ]
+            source_note = " | ".join(bit for bit in source_bits if bit)
+            for municipality in targets:
+                details.append({
+                    "source_file": path.name,
+                    "sheet": sheet_name,
+                    "province": province,
+                    "district": district,
+                    "municipality": municipality,
+                    "year": 2027,
+                    "program": program,
+                    "commodity": commodity,
+                    "office_function": tier_2,
+                    "tier_1": tier_1,
+                    "tier_2": tier_2,
+                    "activity": activity,
+                    "unit": cells[physical_idx],
+                    "physical_target": format_number(physical / divisor) if physical else "",
+                    "budget": format_number(budget / divisor) if budget else "0.00",
+                    "length_km": "",
+                    "allocation_method": "ALL PROGRAMS 2027 municipality split",
+                    "source_note": source_note,
+                })
+
+    return details, unmatched
 
 
 def is_infra_program(program, activity):
@@ -636,10 +972,27 @@ def summarize_rows(files, municipal_csv):
     details = []
     unmatched = []
     has_dedicated_hvcdp = any(is_dedicated_hvcdp_file(path) for path in files)
+    all_programs_files = [path for path in files if is_all_programs_file(path)]
+    has_all_programs_2027 = bool(all_programs_files)
+
+    for path in all_programs_files:
+        all_details, all_unmatched = extract_all_programs_rows(
+            path,
+            read_workbook(path),
+            by_province,
+            by_district,
+            aliases,
+        )
+        details.extend(all_details)
+        unmatched.extend(all_unmatched)
 
     for path in files:
+        if is_all_programs_file(path):
+            continue
         sheets = read_workbook(path)
         if is_dedicated_hvcdp_file(path):
+            if has_all_programs_2027:
+                continue
             details.extend(extract_dedicated_hvcdp_rows(path, sheets, by_district))
             continue
 
@@ -668,6 +1021,9 @@ def summarize_rows(files, municipal_csv):
 
                 direct_key = match_direct_municipality(cells[0], province_key, by_province, aliases)
                 if direct_key and not any(term in joined for term in ["TOTAL", "SUBTOTAL", "GRAND TOTAL"]):
+                    row_year = current_year or 2027
+                    if has_all_programs_2027 and row_year == 2027 and not preserve_legacy_2027_program(program):
+                        continue
                     municipality = by_province[province_key][direct_key]
                     amount = to_number(cells[4]) or to_number(cells[5]) or max(to_number(cell) for cell in cells[1:8])
                     length = to_number(cells[3])
@@ -677,7 +1033,7 @@ def summarize_rows(files, municipal_csv):
                         "province": province,
                         "district": district,
                         "municipality": municipality,
-                        "year": current_year or 2027,
+                        "year": row_year,
                         "program": program,
                         "activity": cells[2] or cells[0],
                         "unit": cells[1],
@@ -690,6 +1046,8 @@ def summarize_rows(files, municipal_csv):
                     continue
 
                 if len(cells) < 12 or not cells[0] or any(term in joined for term in ["GRAND TOTAL", "PREPARED BY", "CONCURRED BY"]):
+                    continue
+                if has_all_programs_2027 and not preserve_legacy_2027_program(program):
                     continue
 
                 remarks = " ".join(cells[12:])

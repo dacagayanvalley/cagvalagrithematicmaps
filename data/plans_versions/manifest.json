@@ -1,6 +1,19 @@
 {
-  "latest_version_id": "2026-05-18T131206-0800",
+  "latest_version_id": "2026-05-18T194525-0800",
   "versions": [
+    {
+      "id": "2026-05-18T194525-0800",
+      "label": "2026-05-18T19:45:25+08:00",
+      "generated_at": "2026-05-18T19:45:25+08:00",
+      "latest_source_file_modified_at": "2026-05-18T19:21:16+08:00",
+      "source_file_count": 14,
+      "summary_rows": 93,
+      "detail_rows": 1662,
+      "summary_url": "data/plans_versions/2026-05-18T194525-0800/plans_projects_2025_2027.csv",
+      "detail_url": "data/plans_versions/2026-05-18T194525-0800/plans_projects_2025_2027_details.csv",
+      "metadata_url": "data/plans_versions/2026-05-18T194525-0800/plans_projects_metadata.json",
+      "unmatched_url": "data/plans_versions/2026-05-18T194525-0800/plans_projects_unmatched_terms.csv"
+    },
     {
       "id": "2026-05-18T131206-0800",
       "label": "2026-05-18T13:12:06+08:00",
