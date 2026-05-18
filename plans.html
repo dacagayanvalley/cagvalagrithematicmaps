@@ -60,6 +60,13 @@
           </select>
         </section>
 
+        <section class="filter-section" id="hvc-commodity-section">
+          <div class="section-label">HVCDP Commodity</div>
+          <select id="hvc-commodity-filter">
+            <option value="all">All HVCDP Commodities</option>
+          </select>
+        </section>
+
         <section class="filter-section">
           <div class="section-label">Search</div>
           <input type="text" id="search-filter" placeholder="Municipality, activity, barangay">
@@ -145,6 +152,10 @@
           <article class="analysis-panel">
             <div class="panel-title">Top Municipalities</div>
             <canvas id="municipality-chart"></canvas>
+          </article>
+          <article class="analysis-panel">
+            <div class="panel-title">Budget by Commodity</div>
+            <canvas id="commodity-chart"></canvas>
           </article>
           <article class="analysis-panel">
             <div class="panel-title">2027 Budget by Tier 1</div>

@@ -31,6 +31,7 @@ const PlansDashboard = (() => {
   let rows = [];
   let activeYear = "2027";
   let activeCommodity = "all";
+  let hvcCommodityFilter = "all";
   let provinceFilter = "all";
   let districtFilter = "all";
   let municipalityFilter = "all";
@@ -67,6 +68,7 @@ const PlansDashboard = (() => {
       complete: result => {
         rows = result.data.map(normalizeRow).filter(row => !isSummaryOnlyRow(row));
         buildProvinceFilter();
+        buildHvcCommodityFilter();
         updateGeographyFilters();
         update();
       },
@@ -264,6 +266,11 @@ const PlansDashboard = (() => {
       update();
     });
 
+    document.getElementById("hvc-commodity-filter").addEventListener("change", event => {
+      hvcCommodityFilter = event.target.value;
+      update();
+    });
+
     document.getElementById("search-filter").addEventListener("input", event => {
       searchTerm = event.target.value.trim().toLowerCase();
       update();
@@ -299,10 +306,12 @@ const PlansDashboard = (() => {
         provinceFilter = "all";
         districtFilter = "all";
         municipalityFilter = "all";
+        hvcCommodityFilter = "all";
         searchTerm = "";
         activitySearchTerm = "";
         document.getElementById("search-filter").value = "";
         document.getElementById("activity-search").value = "";
+        document.getElementById("hvc-commodity-filter").value = "all";
         loadDataset();
       });
     }
@@ -333,7 +342,10 @@ const PlansDashboard = (() => {
 
     document.getElementById("export-plans").addEventListener("click", () => {
       const csv = toCSV(filteredRows());
-      downloadCSV(csv, `agriplan_${activeCommodity}_${activeYear}.csv`);
+      const hvcSuffix = activeCommodity === "hvc" && hvcCommodityFilter !== "all"
+        ? `_${slugify(hvcCommodityFilter)}`
+        : "";
+      downloadCSV(csv, `agriplan_${activeCommodity}${hvcSuffix}_${activeYear}.csv`);
     });
   }
 
@@ -385,6 +397,30 @@ const PlansDashboard = (() => {
         `<option value="${escapeHTML(municipality)}" ${municipality === municipalityFilter ? "selected" : ""}>${escapeHTML(municipality)}</option>`
       ).join("");
     select.value = municipalityFilter;
+  }
+
+  function buildHvcCommodityFilter() {
+    const section = document.getElementById("hvc-commodity-section");
+    const select = document.getElementById("hvc-commodity-filter");
+    if (!section || !select) return;
+
+    const commodities = [...new Set(rows
+      .filter(row => row.program === "High Value Crops")
+      .map(row => row.commodityLabel)
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+
+    if (hvcCommodityFilter !== "all" && !commodities.includes(hvcCommodityFilter)) {
+      hvcCommodityFilter = "all";
+    }
+
+    select.innerHTML = `<option value="all">All HVCDP Commodities</option>` +
+      commodities.map(commodity =>
+        `<option value="${escapeHTML(commodity)}" ${commodity === hvcCommodityFilter ? "selected" : ""}>${escapeHTML(commodity)}</option>`
+      ).join("");
+    select.value = hvcCommodityFilter;
+    section.classList.toggle("filter-section-muted", activeCommodity !== "hvc");
+    select.disabled = activeCommodity !== "hvc";
   }
 
   function compareDistricts(a, b) {
@@ -446,7 +482,9 @@ const PlansDashboard = (() => {
       const btn = event.target.closest("button[data-commodity]");
       if (!btn) return;
       activeCommodity = btn.dataset.commodity;
+      if (activeCommodity !== "hvc") hvcCommodityFilter = "all";
       setActiveButton("#commodity-tabs button", btn);
+      buildHvcCommodityFilter();
       update();
     });
   }
@@ -467,6 +505,7 @@ const PlansDashboard = (() => {
       if (districtFilter !== "all" && row.districtKey !== districtFilter) return false;
       if (municipalityFilter !== "all" && row.municipality !== municipalityFilter) return false;
       if (programs && !programs.includes(row.program)) return false;
+      if (commodity === "hvc" && hvcCommodityFilter !== "all" && row.commodityLabel !== hvcCommodityFilter) return false;
       if (searchTerm && !row.searchText.includes(searchTerm)) return false;
       return true;
     });
@@ -491,12 +530,14 @@ const PlansDashboard = (() => {
 
   function updateLens(data) {
     const commodity = COMMODITIES.find(item => item.key === activeCommodity)?.label || "All";
+    const hvcCommodity = activeCommodity === "hvc" && hvcCommodityFilter !== "all" ? hvcCommodityFilter : "";
     const budget = sum(data, "budgetValue");
     const provinceText = provinceFilter === "all" ? "all provinces" : provinceFilter;
     const districtText = districtFilter === "all" ? "all districts" : (rows.find(row => row.districtKey === districtFilter)?.displayDistrict || districtFilter);
     const municipalityText = municipalityFilter === "all" ? "all municipalities" : municipalityFilter;
     document.getElementById("lens-summary").innerHTML = `
       <div><strong>${escapeHTML(commodity)}</strong>${escapeHTML(YEAR_LABELS[activeYear] || activeYear)}</div>
+      ${hvcCommodity ? `<div>HVCDP commodity: ${escapeHTML(hvcCommodity)}</div>` : ""}
       <div>${formatNumber(data.length)} records across ${escapeHTML(provinceText)}, ${escapeHTML(districtText)}, ${escapeHTML(municipalityText)}</div>
       <div>${formatNumber(budget)} PHP '000 total tagged budget</div>
     `;
@@ -506,6 +547,7 @@ const PlansDashboard = (() => {
     renderCategoryChart("province-chart", groupBudget(data, "province").slice(0, 8), "Budget", "#1a6b3c");
     renderCategoryChart("district-chart", groupBudget(data, "district").slice(0, 12), "Budget", "#b45309");
     renderCategoryChart("municipality-chart", groupBudget(data, "municipality").slice(0, 10), "Budget", "#2e7d9a");
+    renderCategoryChart("commodity-chart", groupBudget(data, "commodity").slice(0, 10), "Budget", "#2563eb");
     renderCategoryChart("tier1-chart", groupBudget(data, "tier1").slice(0, 8), "Budget", "#7c3aed");
     renderCategoryChart("tier2-chart", groupBudget(data, "tier2").slice(0, 8), "Budget", "#0f766e");
     renderYearChart();
@@ -518,6 +560,8 @@ const PlansDashboard = (() => {
         ? row.displayMunicipality
         : field === "district"
           ? districtLabel(row)
+          : field === "commodity"
+            ? (row.commodityLabel || row.program || "Unspecified Commodity")
           : field === "tier1"
             ? (row.tier1 || "Unspecified Tier 1")
             : field === "tier2"
@@ -1007,6 +1051,14 @@ const PlansDashboard = (() => {
       minute: "2-digit",
       hour12: true,
     });
+  }
+
+  function slugify(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "selection";
   }
 
   function escapeHTML(value) {

@@ -171,6 +171,10 @@ body[data-theme="dark"] .brand-mark {
   border-bottom: 1px solid var(--line);
 }
 
+.filter-section-muted {
+  opacity: 0.58;
+}
+
 .section-label,
 .panel-title {
   font-family: var(--font-condensed);
