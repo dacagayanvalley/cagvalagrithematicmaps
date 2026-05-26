@@ -1,0 +1,178 @@
+{
+  "dataset_name": "ABEMIS Infrastructure Inventory",
+  "source": "C:\\Users\\Jeff Factora\\Downloads\\2026\\PIP\\ABEMIS_Infra_Inventory_as-of_Mar-30-2026.xlsx",
+  "as_of": "2026-03-30",
+  "generated_at": "2026-05-26T08:27:04+08:00",
+  "source_file_size_bytes": 163927,
+  "source_file_modified_at": "2026-05-26T07:59:13+08:00",
+  "project_rows": 2004,
+  "project_type_count": 30,
+  "project_groups": [
+    {
+      "key": "abemis_fmr",
+      "label": "Farm-to-Market Roads",
+      "project_count_field": "abemis_fmr_projects",
+      "cost_field": "abemis_fmr_cost"
+    },
+    {
+      "key": "abemis_irrigation",
+      "label": "Irrigation and Water Systems",
+      "project_count_field": "abemis_irrigation_projects",
+      "cost_field": "abemis_irrigation_cost"
+    },
+    {
+      "key": "abemis_postharvest",
+      "label": "Postharvest and Processing",
+      "project_count_field": "abemis_postharvest_projects",
+      "cost_field": "abemis_postharvest_cost"
+    },
+    {
+      "key": "abemis_protected_cultivation",
+      "label": "Protected Cultivation and Nurseries",
+      "project_count_field": "abemis_protected_cultivation_projects",
+      "cost_field": "abemis_protected_cultivation_cost"
+    },
+    {
+      "key": "abemis_food_garden",
+      "label": "Food Gardens",
+      "project_count_field": "abemis_food_garden_projects",
+      "cost_field": "abemis_food_garden_cost"
+    },
+    {
+      "key": "abemis_livestock",
+      "label": "Livestock Facilities",
+      "project_count_field": "abemis_livestock_projects",
+      "cost_field": "abemis_livestock_cost"
+    },
+    {
+      "key": "abemis_other",
+      "label": "Other ABEMIS Infrastructure",
+      "project_count_field": "abemis_other_projects",
+      "cost_field": "abemis_other_cost"
+    }
+  ],
+  "barangay_matched_rows": 1836,
+  "barangay_unmatched_rows": 168,
+  "project_type_fields": [
+    {
+      "field": "abemis_check_dam_count",
+      "label": "Check Dam"
+    },
+    {
+      "field": "abemis_chicken_housing_count",
+      "label": "Chicken Housing"
+    },
+    {
+      "field": "abemis_coffee_processing_center_count",
+      "label": "Coffee Processing Center"
+    },
+    {
+      "field": "abemis_cold_storage_count",
+      "label": "Cold Storage"
+    },
+    {
+      "field": "abemis_diversion_dam_count",
+      "label": "Diversion Dam"
+    },
+    {
+      "field": "abemis_farm_to_market_road_count",
+      "label": "Farm-to-Market Road"
+    },
+    {
+      "field": "abemis_fertilizer_processing_center_count",
+      "label": "Fertilizer Processing Center"
+    },
+    {
+      "field": "abemis_grain_silo_count",
+      "label": "Grain Silo"
+    },
+    {
+      "field": "abemis_greenhouse_count",
+      "label": "Greenhouse"
+    },
+    {
+      "field": "abemis_gulayan_sa_barangay_count",
+      "label": "Gulayan sa Barangay"
+    },
+    {
+      "field": "abemis_mobile_solar_power_irrigation_unit_count",
+      "label": "Mobile Solar Power Irrigation Unit"
+    },
+    {
+      "field": "abemis_multi_crop_drying_pavement_mcdp_count",
+      "label": "Multi Crop Drying Pavement (MCDP)"
+    },
+    {
+      "field": "abemis_multi_commodity_drying_shed_count",
+      "label": "Multi-Commodity Drying Shed"
+    },
+    {
+      "field": "abemis_multi_purpose_drying_pavement_count",
+      "label": "Multi-Purpose Drying Pavement"
+    },
+    {
+      "field": "abemis_mushroom_fruiting_house_count",
+      "label": "Mushroom Fruiting House"
+    },
+    {
+      "field": "abemis_nursery_establishment_count",
+      "label": "Nursery Establishment"
+    },
+    {
+      "field": "abemis_packinghouse_count",
+      "label": "Packinghouse"
+    },
+    {
+      "field": "abemis_palay_shed_count",
+      "label": "Palay Shed"
+    },
+    {
+      "field": "abemis_rabbit_housing_count",
+      "label": "Rabbit Housing"
+    },
+    {
+      "field": "abemis_rainshelter_count",
+      "label": "Rainshelter"
+    },
+    {
+      "field": "abemis_rice_processing_center_count",
+      "label": "Rice Processing Center"
+    },
+    {
+      "field": "abemis_school_garden_count",
+      "label": "School Garden"
+    },
+    {
+      "field": "abemis_small_water_impounding_project_count",
+      "label": "Small Water Impounding Project"
+    },
+    {
+      "field": "abemis_solar_powered_fertigation_system_8_count",
+      "label": "Solar-Powered Fertigation System (8)"
+    },
+    {
+      "field": "abemis_solar_powered_irrigation_system_count",
+      "label": "Solar-Powered Irrigation System"
+    },
+    {
+      "field": "abemis_spring_development_count",
+      "label": "Spring Development"
+    },
+    {
+      "field": "abemis_swine_housing_count",
+      "label": "Swine Housing"
+    },
+    {
+      "field": "abemis_vermi_composting_facilities_count",
+      "label": "Vermi-Composting Facilities"
+    },
+    {
+      "field": "abemis_village_type_corn_postharvest_processing_center_vtcppc_count",
+      "label": "Village Type Corn Postharvest Processing Center (VTCPPC)"
+    },
+    {
+      "field": "abemis_warehouse_count",
+      "label": "Warehouse"
+    }
+  ]
+}

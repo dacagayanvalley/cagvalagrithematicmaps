@@ -18,6 +18,9 @@ const DataLoader = (() => {
   let f2c2ClustersData = [];
   let f2c2SummaryData = [];
   let rsbaSummaryData = [];
+  let abemisSummaryData = [];
+  let abemisBarangayData = [];
+  let abemisProjectsData = [];
   let irrigationFacilitiesData = [];
   let facilitiesData = [];
   let joinMismatches = [];
@@ -200,21 +203,40 @@ const DataLoader = (() => {
     }
 
     try {
+      abemisSummaryData = await fetchCSV(dataPath + "abemis_municipal_summary.csv");
+      mergeAbemisSummaryData(abemisSummaryData);
+      console.info(`Loaded abemis_municipal_summary.csv: ${abemisSummaryData.length} records`);
+    } catch (e) {
+      console.warn("abemis_municipal_summary.csv not found. ABEMIS indicators will be unavailable.", e);
+      abemisSummaryData = [];
+      addAbemisMunicipalDefaults();
+    }
+
+    try {
+      abemisBarangayData = await fetchCSV(dataPath + "abemis_barangay_summary.csv");
+      mergeAbemisBarangayData(abemisBarangayData);
+      console.info(`Loaded abemis_barangay_summary.csv: ${abemisBarangayData.length} records`);
+    } catch (e) {
+      console.warn("abemis_barangay_summary.csv not found. ABEMIS barangay indicators will be unavailable.", e);
+      abemisBarangayData = [];
+      addAbemisBarangayDefaults();
+    }
+
+    try {
+      abemisProjectsData = await fetchCSV(dataPath + "abemis_projects.csv");
+      console.info(`Loaded abemis_projects.csv: ${abemisProjectsData.length} records`);
+    } catch (e) {
+      console.warn("abemis_projects.csv not found. ABEMIS project detail export will be unavailable.", e);
+      abemisProjectsData = [];
+    }
+
+    try {
       facilitiesData = await fetchCSV(dataPath + "facilities.csv");
-      facilitiesData = facilitiesData.filter(row => !isIrrigationFacilityType(row.facility_type));
+      facilitiesData = facilitiesData.filter(row => !isRemovedFacilityType(row.facility_type));
       console.info(`Loaded facilities.csv: ${facilitiesData.length} records`);
     } catch (e) {
       console.warn("facilities.csv not found.", e);
       facilitiesData = [];
-    }
-
-    try {
-      irrigationFacilitiesData = await fetchCSV(dataPath + "irrigation_facilities.csv");
-      facilitiesData = facilitiesData.concat(toIrrigationFacilityRows(irrigationFacilitiesData));
-      console.info(`Loaded irrigation_facilities.csv: ${irrigationFacilitiesData.length} records`);
-    } catch (e) {
-      console.warn("irrigation_facilities.csv not found. RAED irrigation point layer will be unavailable.", e);
-      irrigationFacilitiesData = [];
     }
 
     try {
@@ -233,6 +255,14 @@ const DataLoader = (() => {
     } catch (e) {
       console.warn("f2c2_clusters.csv not found. F2C2 cluster point layer will be unavailable.", e);
       f2c2ClustersData = [];
+    }
+
+    try {
+      const abemisFacilities = await fetchCSV(dataPath + "abemis_facilities.csv");
+      facilitiesData = facilitiesData.concat(abemisFacilities);
+      console.info(`Loaded abemis_facilities.csv: ${abemisFacilities.length} records`);
+    } catch (e) {
+      console.warn("abemis_facilities.csv not found. ABEMIS inventory point layer will be unavailable.", e);
     }
 
     performJoin();
@@ -254,6 +284,9 @@ const DataLoader = (() => {
       f2c2ClustersData,
       f2c2SummaryData,
       rsbaSummaryData,
+      abemisSummaryData,
+      abemisBarangayData,
+      abemisProjectsData,
       irrigationFacilitiesData,
       facilitiesData,
       joinMismatches
@@ -597,6 +630,64 @@ const DataLoader = (() => {
     addRsbaDefaults();
   }
 
+  function mergeAbemisSummaryData(rows) {
+    rows.forEach(abemisRow => {
+      const row = findMunicipalDataRow(abemisRow.province, abemisRow.municipality);
+      if (!row) {
+        joinMismatches.push({
+          type: "abemis_no_csv",
+          name: `${abemisRow.municipality}, ${abemisRow.province}`,
+          message: "ABEMIS summary row has no matching municipal_data.csv row"
+        });
+        return;
+      }
+
+      Object.assign(row, abemisRow);
+    });
+
+    addAbemisMunicipalDefaults();
+  }
+
+  function mergeAbemisBarangayData(rows) {
+    if (!barangayGeoJSON) return;
+
+    const byCode = {};
+    const byName = {};
+    rows.forEach(row => {
+      const code = String(row.ADM4_PCODE || "").trim();
+      if (code) byCode[code] = row;
+      const key = buildBarangayKey(row.province, row.municipality, row.barangay);
+      byName[key] = row;
+    });
+
+    let matched = 0;
+    barangayGeoJSON.features.forEach(feature => {
+      const props = feature.properties || {};
+      const code = String(props.ADM4_PCODE || "").trim();
+      const row = byCode[code] || byName[buildBarangayKey(
+        props.ADM2_EN || props.province,
+        props.ADM3_EN || props.municipality,
+        props.ADM4_EN || props.barangay
+      )];
+      if (row) {
+        Object.assign(props, row);
+        props._joined = true;
+        matched++;
+      }
+    });
+
+    addAbemisBarangayDefaults();
+    console.info(`ABEMIS barangay join complete: ${matched} matched features`);
+  }
+
+  function buildBarangayKey(province, municipality, barangay) {
+    return [
+      Utils.normalizeName(province),
+      Utils.normalizeName(municipality),
+      Utils.normalizeName(barangay)
+    ].join("||");
+  }
+
   function addPlansProjectDefaults() {
     Object.values(municipalData).forEach(row => addPlansDerivedFields(row));
   }
@@ -735,6 +826,33 @@ const DataLoader = (() => {
     });
   }
 
+  function getAbemisIndicatorKeys() {
+    return Object.entries(INDICATOR_CONFIG)
+      .filter(([, cfg]) => cfg.category === "ABEMIS Database")
+      .map(([key]) => key);
+  }
+
+  function addAbemisMunicipalDefaults() {
+    const fields = getAbemisIndicatorKeys();
+    Object.values(municipalData).forEach(row => addAbemisDefaultsToRow(row, fields));
+  }
+
+  function addAbemisBarangayDefaults() {
+    if (!barangayGeoJSON) return;
+    const fields = getAbemisIndicatorKeys();
+    barangayGeoJSON.features.forEach(feature => addAbemisDefaultsToRow(feature.properties || {}, fields));
+  }
+
+  function addAbemisDefaultsToRow(row, fields) {
+    fields.forEach(field => {
+      const cfg = INDICATOR_CONFIG[field] || {};
+      if (row[field] !== undefined && row[field] !== null && row[field] !== "") return;
+      row[field] = cfg.type === "categorical" ? "" : "0";
+    });
+    if (row.abemis_banner_programs === undefined || row.abemis_banner_programs === null) row.abemis_banner_programs = "";
+    if (row.abemis_project_types === undefined || row.abemis_project_types === null) row.abemis_project_types = "";
+  }
+
   function computeRsbaAverageArea(area, count) {
     const n = Utils.parseNumeric(area);
     const d = Utils.parseNumeric(count);
@@ -819,6 +937,14 @@ const DataLoader = (() => {
 
   function isIrrigationFacilityType(type) {
     return ["DD", "SWIP", "SPIS", "PISOS", "STW"].includes(String(type || "").trim().toUpperCase());
+  }
+
+  function isPostharvestFacilityType(type) {
+    return ["WAREHOUSE", "RICEMILL", "CORNMILL", "DRYER", "PROCESSING"].includes(String(type || "").trim().toUpperCase());
+  }
+
+  function isRemovedFacilityType(type) {
+    return isIrrigationFacilityType(type) || isPostharvestFacilityType(type);
   }
 
   function addPlansDerivedFields(row) {
@@ -1011,6 +1137,9 @@ const DataLoader = (() => {
     get f2c2ClustersData() { return f2c2ClustersData; },
     get f2c2SummaryData() { return f2c2SummaryData; },
     get rsbaSummaryData() { return rsbaSummaryData; },
+    get abemisSummaryData() { return abemisSummaryData; },
+    get abemisBarangayData() { return abemisBarangayData; },
+    get abemisProjectsData() { return abemisProjectsData; },
     get irrigationFacilitiesData() { return irrigationFacilitiesData; },
     get facilitiesData() { return facilitiesData; }
   };

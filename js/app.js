@@ -225,6 +225,18 @@ const App = (() => {
         "Use commodity and proposed enterprise details to match support packages with market linkage, processing, credit, or enterprise operation gaps."
       ]
     },
+    abemis_infra_review: {
+      label: "Review ABEMIS infrastructure inventory",
+      question: "Where do ABEMIS infrastructure records, project cost, FMR, irrigation, postharvest, and small-farm need point to closer validation?",
+      category: "ABEMIS Database",
+      indicator: "abemis_total_projects",
+      evidence: ["abemis_total_projects", "abemis_total_cost", "abemis_avg_cost_per_project", "abemis_latest_year", "abemis_dominant_project_group", "abemis_fmr_projects", "abemis_irrigation_projects", "abemis_postharvest_projects", "abemis_protected_cultivation_projects", "poor_rice_farmers", "poor_corn_farmers", "poverty_2023"],
+      actions: [
+        "Turn on ABEMIS layer groups to inspect FMR, irrigation, postharvest, protected cultivation, food garden, livestock, and other project records separately.",
+        "Use barangay view for local concentration, then switch to municipality, district, or province views for grouped aggregation.",
+        "Compare ABEMIS investment concentration with small rice/corn farm and poverty indicators before using the inventory for planning or validation."
+      ]
+    },
     rsba_registry_targeting: {
       label: "Target RSBSA farmer registry support",
       question: "Where does the RSBSA registry show the largest farmer base, crop area, sector participation, and IMC coverage gap?",

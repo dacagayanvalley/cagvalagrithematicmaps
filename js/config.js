@@ -12,7 +12,7 @@ const APP_CONFIG = {
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260515-prism-refresh",
+  assetVersion: "20260526-abemis-refresh",
 };
 
 // ============================================================
@@ -729,6 +729,124 @@ const INDICATOR_CONFIG = {
     colorScheme: "Purples",
     description: "Proposed enterprise status values represented by FCA/F2C2 clusters."
   },
+
+  // --- ABEMIS infrastructure inventory as of March 30, 2026 ---
+  abemis_total_projects: {
+    label: "ABEMIS Projects",
+    category: "ABEMIS Database",
+    type: "numeric",
+    unit: "projects",
+    aggregation: "sum",
+    colorScheme: "PuBu",
+    year: "as of 2026-03-30",
+    description: "Total infrastructure and facility project records from the ABEMIS inventory."
+  },
+  abemis_total_cost: {
+    label: "ABEMIS Project Cost",
+    category: "ABEMIS Database",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "sum",
+    colorScheme: "YlOrBr",
+    year: "as of 2026-03-30",
+    description: "Total project cost encoded in the ABEMIS infrastructure inventory."
+  },
+  abemis_total_quantity: {
+    label: "ABEMIS Quantity",
+    category: "ABEMIS Database",
+    type: "numeric",
+    unit: "qty",
+    aggregation: "sum",
+    colorScheme: "Greens",
+    year: "as of 2026-03-30",
+    description: "Total quantity encoded across ABEMIS project records."
+  },
+  abemis_avg_cost_per_project: {
+    label: "ABEMIS Avg Cost per Project",
+    category: "ABEMIS Database",
+    type: "numeric",
+    unit: "PHP/project",
+    aggregation: "ratio",
+    numerator: "abemis_total_cost",
+    denominator: "abemis_total_projects",
+    colorScheme: "YlOrBr",
+    year: "as of 2026-03-30",
+    description: "Average ABEMIS project cost, computed from total encoded cost divided by project records."
+  },
+  abemis_latest_year: {
+    label: "Latest ABEMIS Funding Year",
+    category: "ABEMIS Database",
+    type: "numeric",
+    unit: "",
+    aggregation: "max",
+    colorScheme: "Blues",
+    year: "as of 2026-03-30",
+    description: "Latest year funded represented in the ABEMIS records for the area."
+  },
+  abemis_dominant_project_type: {
+    label: "Dominant ABEMIS Project Type",
+    category: "ABEMIS Database",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "PuBu",
+    year: "as of 2026-03-30",
+    description: "Most common ABEMIS project type in the area."
+  },
+  abemis_dominant_project_group: {
+    label: "Dominant ABEMIS Project Group",
+    category: "ABEMIS Database",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "PuBu",
+    year: "as of 2026-03-30",
+    description: "Most common ABEMIS planning group in the area."
+  },
+  abemis_fmr_projects: { label: "ABEMIS FMR Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS farm-to-market road project records." },
+  abemis_fmr_cost: { label: "ABEMIS FMR Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS farm-to-market road projects." },
+  abemis_irrigation_projects: { label: "ABEMIS Irrigation/Water Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS irrigation and water-system project records." },
+  abemis_irrigation_cost: { label: "ABEMIS Irrigation/Water Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS irrigation and water-system projects." },
+  abemis_postharvest_projects: { label: "ABEMIS Postharvest/Processing Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS postharvest, processing, drying, storage, and packing project records." },
+  abemis_postharvest_cost: { label: "ABEMIS Postharvest/Processing Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS postharvest and processing projects." },
+  abemis_protected_cultivation_projects: { label: "ABEMIS Protected Cultivation Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS greenhouse, rainshelter, nursery, mushroom, and vermi-composting project records." },
+  abemis_protected_cultivation_cost: { label: "ABEMIS Protected Cultivation Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS protected cultivation and nursery projects." },
+  abemis_food_garden_projects: { label: "ABEMIS Food Garden Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS school garden and Gulayan sa Barangay project records." },
+  abemis_food_garden_cost: { label: "ABEMIS Food Garden Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS food garden projects." },
+  abemis_livestock_projects: { label: "ABEMIS Livestock Facility Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS livestock housing project records." },
+  abemis_livestock_cost: { label: "ABEMIS Livestock Facility Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS livestock facility projects." },
+  abemis_other_projects: { label: "ABEMIS Other Infrastructure Projects", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Purples", year: "as of 2026-03-30", description: "ABEMIS projects not assigned to the main planning groups." },
+  abemis_other_cost: { label: "ABEMIS Other Infrastructure Cost", category: "ABEMIS Database", type: "numeric", unit: "PHP", aggregation: "sum", colorScheme: "Purples", year: "as of 2026-03-30", description: "Total encoded cost of ABEMIS projects not assigned to the main planning groups." },
+  abemis_check_dam_count: { label: "Check Dam", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Check Dam project count." },
+  abemis_chicken_housing_count: { label: "Chicken Housing", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Chicken Housing project count." },
+  abemis_coffee_processing_center_count: { label: "Coffee Processing Center", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS Coffee Processing Center project count." },
+  abemis_cold_storage_count: { label: "Cold Storage", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "PuBu", year: "as of 2026-03-30", description: "ABEMIS Cold Storage project count." },
+  abemis_diversion_dam_count: { label: "Diversion Dam", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Diversion Dam project count." },
+  abemis_farm_to_market_road_count: { label: "Farm-to-Market Road", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS Farm-to-Market Road project count." },
+  abemis_fertilizer_processing_center_count: { label: "Fertilizer Processing Center", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Fertilizer Processing Center project count." },
+  abemis_grain_silo_count: { label: "Grain Silo", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS Grain Silo project count." },
+  abemis_greenhouse_count: { label: "Greenhouse", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Greenhouse project count." },
+  abemis_gulayan_sa_barangay_count: { label: "Gulayan sa Barangay", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Gulayan sa Barangay project count." },
+  abemis_mobile_solar_power_irrigation_unit_count: { label: "Mobile Solar Power Irrigation Unit", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Mobile Solar Power Irrigation Unit project count." },
+  abemis_multi_commodity_drying_shed_count: { label: "Multi-Commodity Drying Shed", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Multi-Commodity Drying Shed project count." },
+  abemis_multi_crop_drying_pavement_mcdp_count: { label: "Multi Crop Drying Pavement (MCDP)", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Multi Crop Drying Pavement project count." },
+  abemis_multi_purpose_drying_pavement_count: { label: "Multi-Purpose Drying Pavement", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Multi-Purpose Drying Pavement project count." },
+  abemis_mushroom_fruiting_house_count: { label: "Mushroom Fruiting House", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Purples", year: "as of 2026-03-30", description: "ABEMIS Mushroom Fruiting House project count." },
+  abemis_nursery_establishment_count: { label: "Nursery Establishment", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Nursery Establishment project count." },
+  abemis_packinghouse_count: { label: "Packinghouse", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "PuBu", year: "as of 2026-03-30", description: "ABEMIS Packinghouse project count." },
+  abemis_palay_shed_count: { label: "Palay Shed", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlGn", year: "as of 2026-03-30", description: "ABEMIS Palay Shed project count." },
+  abemis_rabbit_housing_count: { label: "Rabbit Housing", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Rabbit Housing project count." },
+  abemis_rainshelter_count: { label: "Rainshelter", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Rainshelter project count." },
+  abemis_rice_processing_center_count: { label: "Rice Processing Center", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlGn", year: "as of 2026-03-30", description: "ABEMIS Rice Processing Center project count." },
+  abemis_school_garden_count: { label: "School Garden", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS School Garden project count." },
+  abemis_small_water_impounding_project_count: { label: "Small Water Impounding Project", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Small Water Impounding Project count." },
+  abemis_solar_powered_fertigation_system_8_count: { label: "Solar-Powered Fertigation System", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Solar-Powered Fertigation System project count." },
+  abemis_solar_powered_irrigation_system_count: { label: "Solar-Powered Irrigation System", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Solar-Powered Irrigation System project count." },
+  abemis_spring_development_count: { label: "Spring Development", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Blues", year: "as of 2026-03-30", description: "ABEMIS Spring Development project count." },
+  abemis_swine_housing_count: { label: "Swine Housing", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Oranges", year: "as of 2026-03-30", description: "ABEMIS Swine Housing project count." },
+  abemis_vermi_composting_facilities_count: { label: "Vermi-Composting Facilities", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "Greens", year: "as of 2026-03-30", description: "ABEMIS Vermi-Composting Facilities project count." },
+  abemis_village_type_corn_postharvest_processing_center_vtcppc_count: { label: "Village Type Corn Postharvest Processing Center", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS Village Type Corn Postharvest Processing Center project count." },
+  abemis_warehouse_count: { label: "Warehouse", category: "ABEMIS Database", type: "numeric", unit: "projects", aggregation: "sum", colorScheme: "YlOrBr", year: "as of 2026-03-30", description: "ABEMIS Warehouse project count." },
 
   // --- RSBSA municipal farmer registry from public Power BI report ---
   rsba_registry_count: {
@@ -1656,9 +1774,9 @@ const CATEGORIES = [
   "Pest and Disease",
   "ASF",
   "Soil Fertility",
-  "Infrastructure",
   "FMR Inventory",
   "F2C2 Clusters",
+  "ABEMIS Database",
   "RSBSA Registry",
   "PRiSM Rice Monitoring",
   "PRiSM Flood Damage",
@@ -1948,6 +2066,20 @@ const PRIORITY_MODELS = {
       poor_corn_farmers: 0.11
     }
   },
+  abemis_infra_review: {
+    label: "ABEMIS Infrastructure Review Priority",
+    weights: {
+      abemis_total_projects: 0.18,
+      abemis_total_cost: 0.16,
+      abemis_fmr_projects: 0.12,
+      abemis_irrigation_projects: 0.12,
+      abemis_postharvest_projects: 0.10,
+      abemis_protected_cultivation_projects: 0.08,
+      poor_rice_farmers: 0.10,
+      poor_corn_farmers: 0.10,
+      poverty_2023: 0.04
+    }
+  },
   rsba_registry_targeting: {
     label: "RSBSA Farmer Registry Targeting Priority",
     weights: {
@@ -2186,6 +2318,21 @@ const PLANNING_INSIGHTS = [
     icon: "F2C2", level: "high"
   },
   {
+    condition: (d) => parseFloat(d.abemis_total_projects) >= 25,
+    insight: "ABEMIS shows a large infrastructure inventory here. Use grouped ABEMIS layers to validate project distribution by barangay, type, year, beneficiary, and cost.",
+    icon: "ABEMIS", level: "moderate"
+  },
+  {
+    condition: (d) => parseFloat(d.abemis_irrigation_projects) >= 5 && parseFloat(d.poor_rice_farmers) >= 300,
+    insight: "ABEMIS irrigation or water-system investments overlap with many small rice farms. Check whether projects support current rice exposure and actual service areas.",
+    icon: "ABEMIS", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.abemis_postharvest_projects) >= 3 && (parseFloat(d.poor_rice_farmers) + parseFloat(d.poor_corn_farmers)) >= 500,
+    insight: "Postharvest or processing records overlap with small-farm concentration. Validate whether facilities address drying, storage, processing, or market-access bottlenecks.",
+    icon: "ABEMIS", level: "moderate"
+  },
+  {
     condition: (d) => parseFloat(d.rsba_registry_count) >= 5000,
     insight: "A large RSBSA registry base is present. Use RSBSA indicators to target interventions, validate commodity mix, and check IMC coverage before allocating support.",
     icon: "RSBSA", level: "moderate"
@@ -2221,28 +2368,6 @@ const FACILITY_CATEGORIES = {
       RPC: { label: "Rice Processing Complex (RPC)", icon: "🏭", color: "#1a6b3c" }
     }
   },
-  irrigation: {
-    label: "Irrigation Facilities",
-    groupColor: "#2e7d9a",
-    types: {
-      DD:   { label: "Diversion Dam (DD)",                   icon: "🌊", color: "#0369a1" },
-      SWIP: { label: "Small Water Impounding Project (SWIP)", icon: "💧", color: "#0284c7" },
-      SPIS: { label: "Solar Powered Irrigation System (SPIS)",icon: "☀️", color: "#0ea5e9" },
-      PISOS:{ label: "Pump Irrigation System from Open Source (PISOS)", icon: "PISOS", color: "#0891b2" },
-      STW:  { label: "Shallow Tubewell (STW)",               icon: "⛏️", color: "#38bdf8" }
-    }
-  },
-  postharvest: {
-    label: "Postharvest Facilities",
-    groupColor: "#c0550e",
-    types: {
-      Warehouse:  { label: "Warehouse",            icon: "🏗️", color: "#92400e" },
-      Ricemill:   { label: "Ricemill",             icon: "⚙️", color: "#b45309" },
-      Cornmill:   { label: "Corn Mill",            icon: "🌽", color: "#d97706" },
-      Dryer:      { label: "Drying Facility",      icon: "🔆", color: "#f59e0b" },
-      Processing: { label: "Processing Facility",  icon: "🏪", color: "#f97316" }
-    }
-  },
   fmr: {
     label: "Farm-to-Market Roads",
     groupColor: "#7a4a18",
@@ -2255,6 +2380,19 @@ const FACILITY_CATEGORIES = {
     groupColor: "#256d3c",
     types: {
       F2C2: { label: "FCA/F2C2 Cluster", icon: "F2C2", color: "#256d3c" }
+    }
+  },
+  abemis: {
+    label: "ABEMIS Database",
+    groupColor: "#4f46e5",
+    types: {
+      ABEMIS_FMR: { label: "ABEMIS FMR", icon: "FMR", color: "#7a4a18" },
+      ABEMIS_IRRIGATION: { label: "ABEMIS Irrigation / Water", icon: "IRR", color: "#0284c7" },
+      ABEMIS_POSTHARVEST: { label: "ABEMIS Postharvest / Processing", icon: "PH", color: "#d97706" },
+      ABEMIS_PROTECTED_CULTIVATION: { label: "ABEMIS Protected Cultivation", icon: "PC", color: "#16a34a" },
+      ABEMIS_FOOD_GARDEN: { label: "ABEMIS Food Gardens", icon: "FG", color: "#65a30d" },
+      ABEMIS_LIVESTOCK: { label: "ABEMIS Livestock Facilities", icon: "LV", color: "#ea580c" },
+      ABEMIS_OTHER: { label: "ABEMIS Other Infrastructure", icon: "ABI", color: "#4f46e5" }
     }
   }
   // Add more categories here freely, e.g.:
