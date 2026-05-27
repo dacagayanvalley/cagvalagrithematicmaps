@@ -331,6 +331,41 @@ select:focus, input[type="text"]:focus {
   font-size: 10.5px;
   line-height: 1.35;
 }
+.indicator-data-note {
+  display: none;
+  margin-top: 6px;
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.indicator-data-note.good,
+.indicator-data-note.notice,
+.indicator-data-note.warning,
+.indicator-data-note.critical {
+  display: block;
+}
+.indicator-data-note.good {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+.indicator-data-note.notice {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+}
+.indicator-data-note.warning {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+.indicator-data-note.critical {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
 .btn-secondary:hover { background: var(--color-primary-lt); border-color: var(--color-primary); }
 
 .scenario-apply {
@@ -338,11 +373,177 @@ select:focus, input[type="text"]:focus {
   margin-top: 8px;
 }
 
+.scenario-explain-btn {
+  width: 100%;
+  margin-top: 6px;
+}
+
 .scenario-help {
   margin-top: 7px;
   color: var(--color-text-muted);
   font-size: 10px;
   line-height: 1.35;
+}
+
+.scenario-explainer {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: none;
+}
+.scenario-explainer.open { display: block; }
+.scenario-explainer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+}
+.scenario-explainer-card {
+  position: absolute;
+  top: 64px;
+  right: 22px;
+  width: min(720px, calc(100vw - 44px));
+  max-height: calc(100vh - 104px);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.scenario-explainer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-primary-lt);
+}
+.scenario-explainer-kicker {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.scenario-explainer-head h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+  color: var(--color-text);
+}
+.scenario-explainer-close {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+.scenario-explainer-body {
+  padding: 14px;
+  overflow-y: auto;
+}
+.scenario-explain-grid {
+  display: grid;
+  gap: 12px;
+}
+.scenario-explain-section {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: color-mix(in srgb, var(--color-bg-card) 92%, var(--color-primary-lt));
+}
+.scenario-explain-section h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--color-primary);
+}
+.scenario-explain-section p {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--color-text);
+}
+.scenario-explain-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--color-border);
+  font-size: 11px;
+}
+.scenario-explain-meta span { color: var(--color-text-muted); }
+.scenario-explain-meta b {
+  text-align: right;
+  color: var(--color-text);
+}
+.scenario-weight-table,
+.scenario-evidence-list {
+  display: grid;
+  gap: 8px;
+}
+.scenario-weight-row {
+  display: grid;
+  grid-template-columns: 1fr 74px;
+  gap: 10px;
+  align-items: stretch;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--color-bg-card);
+}
+.scenario-weight-label,
+.scenario-evidence-item b {
+  display: block;
+  font-size: 12px;
+  color: var(--color-text);
+  margin-bottom: 3px;
+}
+.scenario-weight-reason,
+.scenario-evidence-item span {
+  display: block;
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--color-text-muted);
+}
+.scenario-weight-value {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  border-left: 1px solid var(--color-border);
+  padding-left: 8px;
+}
+.scenario-weight-value b {
+  font-size: 16px;
+  color: var(--color-primary);
+}
+.scenario-weight-value span {
+  font-size: 10px;
+  color: var(--color-text-muted);
+}
+.scenario-evidence-item {
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 8px;
+  background: var(--color-bg-card);
+}
+.scenario-action-list {
+  margin: 0;
+  padding-left: 18px;
+}
+.scenario-action-list li {
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--color-text);
 }
 
 .btn-primary {
@@ -1096,6 +1297,34 @@ body[data-theme="dark"] .stat-card.stat-danger { background: #351719; }
   margin-bottom: 4px;
 }
 
+.decision-package {
+  margin: 7px 0;
+}
+
+.package-tags,
+.decision-timeline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.package-tags span,
+.decision-timeline span {
+  border: 1px solid #dbe7dd;
+  border-radius: var(--radius);
+  background: #f4faf6;
+  color: var(--color-primary-dk);
+  padding: 4px 6px;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.decision-timeline span {
+  background: #fff8e6;
+  border-color: #f1dfad;
+  color: #6b4e00;
+}
+
 .decision-rank-row {
   grid-template-columns: 22px 1fr auto;
 }
@@ -1800,6 +2029,26 @@ body[data-theme="dark"] .stat-card.stat-danger { background: #351719; }
 
 /* Narrow screen: full width */
 @media (max-width: 600px) { .climate-panel { width: 100%; } }
+
+@media (max-width: 760px) {
+  .scenario-explainer-card {
+    top: 48px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: calc(100vh - 68px);
+  }
+  .scenario-weight-row {
+    grid-template-columns: 1fr;
+  }
+  .scenario-weight-value {
+    align-items: flex-start;
+    border-left: 0;
+    border-top: 1px solid var(--color-border);
+    padding-left: 0;
+    padding-top: 6px;
+  }
+}
 
 /* ============================================================
    WEATHER OVERLAY — coordinated with app brand colors

@@ -6,17 +6,18 @@ const App = (() => {
   let map = null;
   let appData = null;
   let currentView = "municipality"; // barangay | municipality | district | province
-  let currentIndicator = "population";
-  let currentVizStyle = "choropleth";
+  let currentIndicator = "elnino_resilience_priority_score";
+  let currentVizStyle = "priority";
   let currentGeoJSON = null;
   let currentRows = [];
-  let currentCategory = "Demographics";
+  let currentCategory = "El Nino Resilience";
   let sidebarCollapsed = false;
   let themeMode = localStorage.getItem("agrisight-theme") || "light";
   let rsbaFarmSizeFilter = "all";
   let rsbaCropFilter = "all";
   let rsbaAttributeFilter = "all";
-  let currentScenario = "rice";
+  let currentScenario = "elnino_resilience";
+  let scenarioModeActive = true;
   let selectedArea = null;
   let didInitialMapFit = false;
   let currentDevice = "desktop";
@@ -29,7 +30,7 @@ const App = (() => {
   // Ranked/priority state
   let rankedN = 10;
   let rankedDir = "top";
-  let priorityModel = "rice";
+  let priorityModel = "elnino_resilience";
   let facilitiesLoaded = false;
 
   const DECISION_SCENARIOS = {
@@ -187,6 +188,29 @@ const App = (() => {
         "Validate dry-spell or drought status with the latest PAGASA advisory before field deployment.",
         "Prioritize irrigation scheduling, water-source checks, and crop water-stress monitoring where standing rice exposure is high.",
         "Coordinate farmer advisories, crop insurance checks, and LGU/DA response where poverty and poor rice farmer exposure are also high."
+      ]
+    },
+    elnino_resilience: {
+      label: "Build El Nino resilience packages",
+      question: "Where do climate exposure, vulnerable farmers, production constraints, weak response capacity, and implementation gaps overlap for June 2026 to May 2027 action?",
+      category: "El Nino Resilience",
+      indicator: "elnino_resilience_priority_score",
+      evidence: [
+        "elnino_resilience_priority_score",
+        "elnino_resilience_climate_exposure_score",
+        "elnino_resilience_farmer_vulnerability_score",
+        "elnino_resilience_production_sensitivity_score",
+        "elnino_resilience_response_capacity_gap_score",
+        "elnino_resilience_implementation_gap_score",
+        "pagasa_drought_outlook",
+        "prism_standing_crop_area",
+        "soil_fertility_stress_score",
+        "plans_2027_need_gap_score"
+      ],
+      actions: [
+        "Validate the risk drivers with LGU, AEW, PRiSM, PAGASA, and field reports before final deployment.",
+        "Bundle support by need: water access, crop shift or recovery inputs, soil correction, pest surveillance, postharvest, and beneficiary safeguards.",
+        "Check whether 2026 status and 2027 plan items already cover the package, then flag missing allocations or procurement bottlenecks."
       ]
     },
     projects: {
@@ -654,6 +678,11 @@ const App = (() => {
     const panel = document.getElementById("insights-panel");
     if (!panel) return;
 
+    if (!scenarioModeActive) {
+      panel.innerHTML = renderSingleIndicatorGuide();
+      return;
+    }
+
     const scenario = DECISION_SCENARIOS[currentScenario] || DECISION_SCENARIOS.rice;
     const rows = currentRows.filter(r => r._joined !== false);
     const scoredRows = PriorityScoring.scoreAll(rows, currentScenario);
@@ -702,6 +731,7 @@ const App = (() => {
     const triggerHtml = triggered.length
       ? triggered.map(t => `<div class="decision-note decision-${t.level || "info"}">${escapeHTML(t.insight)}</div>`).join("")
       : `<div class="decision-note decision-info">No high-risk rule was triggered. Use the evidence below to confirm whether support is still warranted.</div>`;
+    const packageHtml = currentScenario === "elnino_resilience" ? renderResiliencePackage(row) : "";
 
     return `<div class="decision-profile">
       <div class="decision-profile-head">
@@ -712,11 +742,86 @@ const App = (() => {
         <div class="decision-score">${row._priorityScore ?? "N/A"}<span>/100</span></div>
       </div>
       ${triggerHtml}
+      ${packageHtml}
       <div class="decision-block-title">Evidence to Check</div>
       <div class="decision-evidence">${scenario.evidence.map(field => renderEvidence(row, field)).join("")}</div>
       <div class="decision-block-title">Recommended Next Actions</div>
       <ol class="decision-actions">${scenario.actions.map(action => `<li>${escapeHTML(action)}</li>`).join("")}</ol>
     </div>`;
+  }
+
+  function renderResiliencePackage(row) {
+    const packageItems = buildResiliencePackage(row);
+    const gapItems = buildResilienceGaps(row);
+    const timeline = buildResilienceTimeline(row);
+
+    return `<div class="decision-package">
+      <div class="decision-block-title">Suggested Response Package</div>
+      <div class="package-tags">${packageItems.map(item => `<span>${escapeHTML(item)}</span>`).join("")}</div>
+      <div class="decision-block-title">Plan and Validation Gaps</div>
+      <ol class="decision-actions">${gapItems.map(item => `<li>${escapeHTML(item)}</li>`).join("")}</ol>
+      <div class="decision-block-title">Operating Window</div>
+      <div class="decision-timeline">${timeline.map(item => `<span>${escapeHTML(item)}</span>`).join("")}</div>
+    </div>`;
+  }
+
+  function buildResiliencePackage(row) {
+    const items = [];
+    const climate = Utils.parseNumeric(row.elnino_resilience_climate_exposure_score) || 0;
+    const vulnerability = Utils.parseNumeric(row.elnino_resilience_farmer_vulnerability_score) || 0;
+    const production = Utils.parseNumeric(row.elnino_resilience_production_sensitivity_score) || 0;
+    const standing = Utils.parseNumeric(row.prism_standing_crop_area) || 0;
+    const irrigationGap = Utils.parseNumeric(row.elnino_irrigation_gap_pct) || 0;
+    const soilStress = Utils.parseNumeric(row.soil_fertility_stress_score) || 0;
+    const acidic = Utils.parseNumeric(row.soil_acidic_pct) || 0;
+    const poorRice = Utils.parseNumeric(row.poor_rice_farmers) || 0;
+    const poorCorn = Utils.parseNumeric(row.poor_corn_farmers) || 0;
+    const malnutrition = Math.max(
+      Utils.parseNumeric(row.stunting) || 0,
+      Utils.parseNumeric(row.underweight) || 0,
+      Utils.parseNumeric(row.wasting) || 0
+    );
+
+    if (climate >= 45 || standing > 1000) items.push("PRiSM/PAGASA field validation");
+    if (irrigationGap >= 45) items.push("Irrigation scheduling, SPIS/INS, and water-source checks");
+    if (poorRice >= 500 || standing > 1000) items.push("Rice seed reserve, crop insurance, and pest surveillance");
+    if (poorCorn >= 500) items.push("Corn drought package, drying, storage, and market-access support");
+    if (soilStress >= 45 || acidic >= 35 || production >= 45) items.push("Soil test validation, ameliorants, biofertilizer, and nutrient advisory");
+    if (vulnerability >= 45 || malnutrition >= 8) items.push("Nutrition-sensitive and inclusion-screened beneficiary targeting");
+    if (!items.length) items.push("Watchlist monitoring and local validation");
+    return items.slice(0, 6);
+  }
+
+  function buildResilienceGaps(row) {
+    const gaps = [];
+    const planGap = Utils.parseNumeric(row.elnino_resilience_implementation_gap_score) || 0;
+    const capacityGap = Utils.parseNumeric(row.elnino_resilience_response_capacity_gap_score) || 0;
+    const budget2027 = Utils.parseNumeric(row.plans_projects_2027_budget) || 0;
+    const irrigationGap = Utils.parseNumeric(row.elnino_irrigation_gap_pct) || 0;
+    const plannedIrrigation = Utils.parseNumeric(row.plans_irrigation_2027_count) || 0;
+    const plannedFmr = Utils.parseNumeric(row.plans_fmr_2027_count) || 0;
+    const fmrInventory = Utils.parseNumeric(row.fmr_inventory_count) || 0;
+
+    if (budget2027 <= 0) gaps.push("No extracted 2027 allocation found; check if projects are missing, unfunded, or encoded elsewhere.");
+    if (planGap >= 55) gaps.push("Implementation gap is high; compare weekly status against the proposed response package.");
+    if (irrigationGap >= 50 && plannedIrrigation <= 0) gaps.push("Irrigation gap is high but no 2027 irrigation item was extracted.");
+    if (fmrInventory <= 0 && plannedFmr <= 0) gaps.push("No clear FMR coverage signal; validate access, hauling, drying, and consolidation constraints.");
+    if (capacityGap >= 70) gaps.push("Response capacity appears thin relative to risk; inspect irrigation, FMR, postharvest, F2C2, and ABEMIS layers.");
+    if (!gaps.length) gaps.push("Existing plan and asset signals are present; validate timing, quantity, beneficiary list, and functionality.");
+    return gaps.slice(0, 5);
+  }
+
+  function buildResilienceTimeline(row) {
+    const items = ["Jun-Aug 2026 validation/deployment"];
+    const production = Utils.parseNumeric(row.elnino_resilience_production_sensitivity_score) || 0;
+    const implementation = Utils.parseNumeric(row.elnino_resilience_implementation_gap_score) || 0;
+    const harvest = Utils.parseNumeric(row.prism_upcoming_harvest_area) || 0;
+
+    if (harvest > 1000) items.push("May-Jun harvest logistics");
+    if (production >= 45) items.push("Sep-Nov soil/crop survival checks");
+    if (implementation >= 45) items.push("2027 plan realignment review");
+    items.push("Jun 2026-May 2027 R&D/economic monitoring");
+    return items;
   }
 
   function renderPriorityArea(row, rank) {
@@ -738,6 +843,34 @@ const App = (() => {
       : Utils.formatValue(raw, field);
     const value = escapeHTML(formatted);
     return `<div class="evidence-row"><span>${label}</span><b>${value}</b></div>`;
+  }
+
+  function renderSingleIndicatorGuide() {
+    const cfg = INDICATOR_CONFIG[currentIndicator] || {};
+    const rows = currentRows.filter(r => r && r._joined !== false);
+    const profile = getIndicatorDataProfile(rows, currentIndicator, cfg);
+    const coverageText = profile.total > 0
+      ? `${profile.withData} of ${profile.total} areas have usable values`
+      : "No area rows are currently loaded";
+    const sourceHint = getIndicatorSourceHint(currentIndicator, cfg);
+
+    return `<div class="decision-summary single-indicator-summary">
+      <div class="decision-kicker">Single indicator mode</div>
+      <div class="decision-question">${escapeHTML(cfg.label || currentIndicator)}</div>
+      <div class="decision-meta">${escapeHTML(cfg.description || "View this layer independently from scenario scoring.")}</div>
+    </div>
+    <div class="decision-profile">
+      <div class="decision-block-title">Layer Readiness</div>
+      <div class="decision-evidence">
+        <div class="evidence-row"><span>Geographic view</span><b>${escapeHTML(currentView)}</b></div>
+        <div class="evidence-row"><span>Data coverage</span><b>${escapeHTML(coverageText)}</b></div>
+        <div class="evidence-row"><span>Aggregation</span><b>${escapeHTML((cfg.aggregation || "none").replace(/_/g, " "))}</b></div>
+      </div>
+      <div class="decision-block-title">Smart Data Suggestion</div>
+      <div class="decision-note decision-info">${escapeHTML(getIndicatorDataSuggestion(profile, currentIndicator, cfg))}</div>
+      <div class="decision-block-title">Possible Update Source</div>
+      <div class="decision-note decision-moderate">${escapeHTML(sourceHint)}</div>
+    </div>`;
   }
 
   // ============================================================
@@ -782,6 +915,7 @@ const App = (() => {
     const cfg = INDICATOR_CONFIG[currentIndicator];
     if (!cfg) {
       el.textContent = "";
+      updateIndicatorDataNote();
       return;
     }
     const year = Utils.getIndicatorYear(currentIndicator);
@@ -789,6 +923,73 @@ const App = (() => {
     if (year) pieces.push(`Year: ${year}`);
     if (cfg.aggregation) pieces.push(`District/province: ${cfg.aggregation.replace(/_/g, " ")}`);
     el.textContent = pieces.join(" | ");
+    updateIndicatorDataNote();
+  }
+
+  function updateIndicatorDataNote() {
+    const el = document.getElementById("indicator-data-note");
+    if (!el) return;
+    if (!appData || !currentIndicator) {
+      el.textContent = "";
+      el.className = "indicator-data-note";
+      return;
+    }
+
+    const cfg = INDICATOR_CONFIG[currentIndicator] || {};
+    const rows = (currentRows && currentRows.length ? currentRows : DataLoader.getMunicipalRows())
+      .filter(r => r && r._joined !== false);
+    const profile = getIndicatorDataProfile(rows, currentIndicator, cfg);
+    const suggestion = getIndicatorDataSuggestion(profile, currentIndicator, cfg);
+    el.textContent = suggestion;
+    el.className = `indicator-data-note ${profile.level}`;
+  }
+
+  function getIndicatorDataProfile(rows, field, cfg = {}) {
+    const total = rows.length;
+    let withData = 0;
+    rows.forEach(row => {
+      const raw = row[field];
+      if (raw === undefined || raw === null || raw === "") return;
+      if (cfg.type === "categorical" || cfg.type === "binary") {
+        withData++;
+        return;
+      }
+      const numeric = Utils.parseNumeric(raw);
+      if (numeric !== null && !isNaN(numeric)) withData++;
+    });
+
+    const coverage = total > 0 ? withData / total : 0;
+    const level = coverage === 0 ? "critical" : coverage < 0.5 ? "warning" : coverage < 0.85 ? "notice" : "good";
+    return { total, withData, coverage, level };
+  }
+
+  function getIndicatorDataSuggestion(profile, field, cfg = {}) {
+    const label = cfg.label || field;
+    if (!profile.total) return "No rows are loaded yet. Load the app data before assessing this indicator.";
+    if (profile.withData === 0) {
+      return `${label} has no usable values in the current view. Consider adding or refreshing its source dataset before using this layer.`;
+    }
+    const pct = Math.round(profile.coverage * 100);
+    if (profile.coverage < 0.5) {
+      return `${label} only covers ${pct}% of visible areas. Use cautiously and update missing municipal or barangay records before inclusion in prioritization.`;
+    }
+    if (profile.coverage < 0.85) {
+      return `${label} covers ${pct}% of visible areas. Good for exploration, but a data refresh or gap-fill would improve comparison.`;
+    }
+    return `${label} has strong coverage at ${pct}% of visible areas. It is suitable for single-layer viewing and comparison.`;
+  }
+
+  function getIndicatorSourceHint(field, cfg = {}) {
+    const category = cfg.category || "";
+    if (field.startsWith("abemis_")) return "Refresh from the latest ABEMIS infrastructure inventory workbook when new projects, beneficiaries, costs, or barangay corrections are available.";
+    if (field.startsWith("rsba_")) return "Refresh from the latest RSBSA source if registry counts, crop area, FCA, IMC, or inclusion fields change.";
+    if (field.startsWith("prism_")) return "Refresh from the latest PRiSM season output before operational rice monitoring or disaster-response use.";
+    if (field.startsWith("soil_")) return "Add updated soil-test records when new laboratory results, crop-specific ratings, or barangay coverage become available.";
+    if (field.startsWith("fmr_")) return "Refresh FMR inventory records when project status, length, beneficiaries, or influence area changes.";
+    if (field.startsWith("f2c2_")) return "Refresh F2C2/FCA cluster records when membership, area, commodities, or enterprise monitoring updates are available.";
+    if (field.startsWith("plans_")) return "Refresh plans and projects extraction when PIP, GAA, or planning workbooks change.";
+    if (category.includes("El Nino")) return "Check PAGASA, PRiSM, irrigation, and field validation updates before using this layer for near-term drought planning.";
+    return "If this layer will inform prioritization, add the newest source file and verify municipal or barangay joins before final use.";
   }
 
   function updateRsbaFilterNote() {
@@ -816,6 +1017,128 @@ const App = (() => {
     sel.innerHTML = Object.entries(DECISION_SCENARIOS).map(([key, scenario]) =>
       `<option value="${key}" ${key === currentScenario ? "selected" : ""}>${scenario.label}</option>`
     ).join("");
+    updateScenarioExplainer();
+  }
+
+  function toggleScenarioExplainer(show) {
+    const panel = document.getElementById("scenario-explainer");
+    if (!panel) return;
+    const shouldShow = show === undefined ? !panel.classList.contains("open") : show;
+    if (shouldShow) updateScenarioExplainer();
+    panel.classList.toggle("open", shouldShow);
+    panel.setAttribute("aria-hidden", String(!shouldShow));
+  }
+
+  function updateScenarioExplainer() {
+    const title = document.getElementById("scenario-explainer-title");
+    const body = document.getElementById("scenario-explainer-body");
+    if (!body) return;
+
+    const scenario = DECISION_SCENARIOS[currentScenario] || DECISION_SCENARIOS.rice;
+    const model = PRIORITY_MODELS[currentScenario] || PRIORITY_MODELS.rice;
+    if (title) title.textContent = scenario.label;
+
+    const weights = Object.entries(model.weights || []);
+    const totalWeight = weights.reduce((sum, [, weight]) => sum + weight, 0) || 1;
+    const evidenceRows = scenario.evidence.map(field => renderScenarioEvidenceField(field)).join("");
+    const weightRows = weights.map(([field, weight]) => renderScenarioWeightField(field, weight, totalWeight)).join("");
+
+    body.innerHTML = `
+      <div class="scenario-explain-grid">
+        <section class="scenario-explain-section scenario-explain-purpose">
+          <h3>Purpose</h3>
+          <p>${escapeHTML(scenario.question)}</p>
+          <div class="scenario-explain-meta">
+            <span>Scenario category</span><b>${escapeHTML(scenario.category || "General")}</b>
+          </div>
+          <div class="scenario-explain-meta">
+            <span>Map indicator</span><b>${escapeHTML(INDICATOR_CONFIG[scenario.indicator]?.label || scenario.indicator)}</b>
+          </div>
+          <div class="scenario-explain-meta">
+            <span>Priority model</span><b>${escapeHTML(model.label || scenario.label)}</b>
+          </div>
+        </section>
+
+        <section class="scenario-explain-section">
+          <h3>How the Score is Built</h3>
+          <p>Each component is normalized against the current geographic rows, multiplied by its weight, then summed to a 0-100 priority score. Higher scores mean the area should be reviewed earlier for this planning question.</p>
+          <div class="scenario-weight-table">
+            ${weightRows}
+          </div>
+        </section>
+
+        <section class="scenario-explain-section">
+          <h3>Data to Review</h3>
+          <p>These fields appear in the recommendation panel because they explain the score or provide validation context before making a field decision.</p>
+          <div class="scenario-evidence-list">
+            ${evidenceRows}
+          </div>
+        </section>
+
+        <section class="scenario-explain-section">
+          <h3>Recommended Use</h3>
+          <ol class="scenario-action-list">
+            ${scenario.actions.map(action => `<li>${escapeHTML(action)}</li>`).join("")}
+          </ol>
+        </section>
+      </div>`;
+  }
+
+  function renderScenarioWeightField(field, weight, totalWeight) {
+    const percent = totalWeight > 0 ? (weight / totalWeight) * 100 : 0;
+    const label = getScenarioFieldLabel(field);
+    const reason = getScenarioFieldReason(field);
+    return `<div class="scenario-weight-row">
+      <div class="scenario-weight-main">
+        <div class="scenario-weight-label">${escapeHTML(label)}</div>
+        <div class="scenario-weight-reason">${escapeHTML(reason)}</div>
+      </div>
+      <div class="scenario-weight-value">
+        <b>${percent.toFixed(0)}%</b>
+        <span>${weight.toFixed(2)}</span>
+      </div>
+    </div>`;
+  }
+
+  function renderScenarioEvidenceField(field) {
+    const cfg = INDICATOR_CONFIG[field];
+    return `<div class="scenario-evidence-item">
+      <b>${escapeHTML(getScenarioFieldLabel(field))}</b>
+      <span>${escapeHTML(cfg?.description || getScenarioFieldReason(field))}</span>
+    </div>`;
+  }
+
+  function getScenarioFieldLabel(field) {
+    const computedLabels = {
+      rice_yield_gap: "Rice Yield Gap",
+      corn_yield_gap: "Corn Yield Gap",
+      rice_mechanization_gap: "Rice Mechanization Gap",
+      corn_mechanization_gap: "Corn Mechanization Gap",
+      irrigation_gap: "Irrigation Gap",
+      pest_disease_score: "Pest and Disease Score",
+      asf_score: "ASF Score",
+      soil_fertility_gap: "Soil Fertility Gap",
+      prism_area_gap_abs: "Absolute PRiSM Area Gap"
+    };
+    return computedLabels[field] || INDICATOR_CONFIG[field]?.label || field.replace(/_/g, " ");
+  }
+
+  function getScenarioFieldReason(field) {
+    const computedReasons = {
+      rice_yield_gap: "Areas farther below the best observed rice yield need stronger productivity validation.",
+      corn_yield_gap: "Areas farther below the best observed corn yield need stronger productivity validation.",
+      rice_mechanization_gap: "Lower mechanization levels can limit timely rice operations and increase labor pressure.",
+      corn_mechanization_gap: "Lower mechanization levels can limit corn land preparation, harvest, and postharvest efficiency.",
+      irrigation_gap: "Lower irrigation coverage raises exposure to dry spells and weakens production reliability.",
+      pest_disease_score: "Higher pest or disease status can quickly reduce yield and should influence response priority.",
+      asf_score: "Higher ASF risk requires biosecurity coordination before livestock-related support.",
+      soil_fertility_gap: "Low soil fertility receives a higher score because it can suppress crop response to other interventions.",
+      prism_area_gap_abs: "Large gaps between PRiSM and reference area suggest the area should be validated before final targeting."
+    };
+    if (computedReasons[field]) return computedReasons[field];
+    const cfg = INDICATOR_CONFIG[field];
+    if (cfg?.description) return cfg.description;
+    return "Included as supporting evidence for this planning scenario.";
   }
 
   function buildBasemapSelector() {
@@ -923,6 +1246,17 @@ const App = (() => {
     if (el) el.style.display = show ? "block" : "none";
   }
 
+  function disengageScenarioModeForIndicator() {
+    scenarioModeActive = false;
+    selectedArea = null;
+    currentVizStyle = "choropleth";
+    const vizSel = document.getElementById("viz-select");
+    if (vizSel) vizSel.value = currentVizStyle;
+    updateBivariateControls(false);
+    updateRankedControls(false);
+    updatePriorityControls(false);
+  }
+
   // ============================================================
   // VIEW SWITCHING
   // ============================================================
@@ -1024,6 +1358,7 @@ const App = (() => {
     // Category select
     const catSel = document.getElementById("category-select");
     if (catSel) catSel.addEventListener("change", () => {
+      disengageScenarioModeForIndicator();
       currentCategory = catSel.value;
       buildIndicatorSelector();
       const indSel = document.getElementById("indicator-select");
@@ -1034,6 +1369,7 @@ const App = (() => {
     // Indicator select
     const indSel = document.getElementById("indicator-select");
     if (indSel) indSel.addEventListener("change", () => {
+      disengageScenarioModeForIndicator();
       currentIndicator = indSel.value;
       updateIndicatorMeta();
       renderCurrentView();
@@ -1064,7 +1400,13 @@ const App = (() => {
     const scenarioSel = document.getElementById("scenario-select");
     if (scenarioSel) scenarioSel.addEventListener("change", () => {
       currentScenario = scenarioSel.value;
+      if (scenarioModeActive) {
+        priorityModel = currentScenario;
+        const modelSel = document.getElementById("priority-model");
+        if (modelSel) modelSel.value = priorityModel;
+      }
       updatePlanningInsights();
+      updateScenarioExplainer();
     });
 
     const applyScenarioBtn = document.getElementById("apply-scenario");
@@ -1072,10 +1414,26 @@ const App = (() => {
       applyScenarioMap();
     });
 
+    const explainScenarioBtn = document.getElementById("scenario-explain-toggle");
+    if (explainScenarioBtn) explainScenarioBtn.addEventListener("click", () => {
+      toggleScenarioExplainer(true);
+    });
+
+    const explainScenarioClose = document.getElementById("scenario-explainer-close");
+    if (explainScenarioClose) explainScenarioClose.addEventListener("click", () => {
+      toggleScenarioExplainer(false);
+    });
+
+    const explainScenarioBackdrop = document.getElementById("scenario-explainer-backdrop");
+    if (explainScenarioBackdrop) explainScenarioBackdrop.addEventListener("click", () => {
+      toggleScenarioExplainer(false);
+    });
+
     // Viz style select
     const vizSel = document.getElementById("viz-select");
     if (vizSel) vizSel.addEventListener("change", () => {
       currentVizStyle = vizSel.value;
+      scenarioModeActive = currentVizStyle === "priority";
       updateBivariateControls(["bivariate", "ratio"].includes(currentVizStyle));
       updateRankedControls(currentVizStyle === "ranked");
       updatePriorityControls(currentVizStyle === "priority");
@@ -1095,7 +1453,11 @@ const App = (() => {
       if (e.target.id === "compare-b") { compareFieldB = e.target.value; renderCurrentView(); }
       if (e.target.id === "ranked-n") { rankedN = parseInt(e.target.value); renderCurrentView(); }
       if (e.target.id === "ranked-dir") { rankedDir = e.target.value; renderCurrentView(); }
-      if (e.target.id === "priority-model") { priorityModel = e.target.value; renderCurrentView(); }
+      if (e.target.id === "priority-model") {
+        priorityModel = e.target.value;
+        scenarioModeActive = true;
+        renderCurrentView();
+      }
     });
 
     // Search
@@ -1206,6 +1568,7 @@ const App = (() => {
     }
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") showAnnouncementSplash(false);
+      if (e.key === "Escape") toggleScenarioExplainer(false);
     });
 
     window.addEventListener("area:selected", (e) => {
@@ -1261,8 +1624,9 @@ const App = (() => {
     currentIndicator = APP_CONFIG.defaultIndicator;
     currentCategory = INDICATOR_CONFIG[currentIndicator]?.category || "Demographics";
     currentVizStyle = APP_CONFIG.defaultStyle;
-    currentScenario = "rice";
-    priorityModel = "rice";
+    currentScenario = "elnino_resilience";
+    scenarioModeActive = currentVizStyle === "priority";
+    priorityModel = "elnino_resilience";
     compareFieldA = "poverty_2023";
     compareFieldB = "poor_rice_farmers";
     rankedN = 10;
@@ -1318,6 +1682,7 @@ const App = (() => {
 
   function applyScenarioMap() {
     const scenario = DECISION_SCENARIOS[currentScenario] || DECISION_SCENARIOS.rice;
+    scenarioModeActive = true;
     currentCategory = scenario.category;
     currentIndicator = scenario.indicator;
     currentVizStyle = "priority";

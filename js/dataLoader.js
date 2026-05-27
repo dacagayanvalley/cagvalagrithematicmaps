@@ -265,6 +265,7 @@ const DataLoader = (() => {
       console.warn("abemis_facilities.csv not found. ABEMIS inventory point layer will be unavailable.", e);
     }
 
+    addElNinoResilienceDerivedFields();
     performJoin();
     reportMismatches();
 
@@ -1017,6 +1018,110 @@ const DataLoader = (() => {
     row.elnino_irrigation_gap_pct = (irrigationGap * 100).toFixed(1);
     row.elnino_rice_risk_score = riskScore.toFixed(1);
     row.elnino_rice_risk_class = classifyElNinoRisk(riskScore);
+  }
+
+  function addElNinoResilienceDerivedFields() {
+    Object.values(municipalData).forEach(row => {
+      addElNinoRiskDerivedFields(row);
+      addPlansDerivedFields(row);
+
+      const drought = Utils.parseNumeric(row.pagasa_drought_score) || 0;
+      const standing = Utils.parseNumeric(row.prism_standing_crop_area) || 0;
+      const reproductive = Utils.parseNumeric(row.prism_growth_reproductive_ha) || 0;
+      const ripening = Utils.parseNumeric(row.prism_growth_ripening_ha) || 0;
+      const hazardDrought = Utils.parseNumeric(row.hazard_drought) || 0;
+      const hazardFlood = Utils.parseNumeric(row.hazard_flood) || 0;
+      const hazardTyphoon = Utils.parseNumeric(row.hazard_typhoon) || 0;
+
+      const poverty = Utils.parseNumeric(row.poverty_2023) || 0;
+      const stunting = Utils.parseNumeric(row.stunting) || 0;
+      const underweight = Utils.parseNumeric(row.underweight) || 0;
+      const wasting = Utils.parseNumeric(row.wasting) || 0;
+      const poorRice = Utils.parseNumeric(row.poor_rice_farmers) || 0;
+      const poorCorn = Utils.parseNumeric(row.poor_corn_farmers) || 0;
+      const rsba4ps = Utils.parseNumeric(row.rsba_4ps_count) || 0;
+      const rsbaIp = Utils.parseNumeric(row.rsba_ip_count) || 0;
+      const rsbaPwd = Utils.parseNumeric(row.rsba_pwd_count) || 0;
+
+      const soilStress = Utils.parseNumeric(row.soil_fertility_stress_score) || 0;
+      const soilAcidic = Utils.parseNumeric(row.soil_acidic_pct) || 0;
+      const soilNpk = Utils.parseNumeric(row.soil_npk_multiple_low_pct) || 0;
+      const soilZinc = Utils.parseNumeric(row.soil_zinc_deficient_pct) || 0;
+      const irrigationGap = Utils.parseNumeric(row.elnino_irrigation_gap_pct) || 0;
+      const riceArea = Utils.parseNumeric(row.rice_area_2025) || Utils.parseNumeric(row.rice_area_2023) || 0;
+      const cornArea = Utils.parseNumeric(row.corn_area_2025) || Utils.parseNumeric(row.corn_area_2023) || 0;
+      const riceYield = Utils.parseNumeric(row.rice_yield_2025) || Utils.parseNumeric(row.rice_yield_2023) || 0;
+      const cornYield = Utils.parseNumeric(row.corn_yield_2025) || Utils.parseNumeric(row.corn_yield_2023) || 0;
+
+      const irrigationAssets = Utils.parseNumeric(row.irrigation_facility_count) || Utils.parseNumeric(row.abemis_irrigation_projects) || 0;
+      const fmrAssets = Utils.parseNumeric(row.fmr_inventory_count) || Utils.parseNumeric(row.abemis_fmr_projects) || 0;
+      const postharvestAssets = Utils.parseNumeric(row.abemis_postharvest_projects) || 0;
+      const f2c2Assets = Utils.parseNumeric(row.f2c2_cluster_count) || 0;
+      const plannedIrrigation = Utils.parseNumeric(row.plans_irrigation_2027_count) || 0;
+      const plannedFmr = Utils.parseNumeric(row.plans_fmr_2027_count) || 0;
+      const budget2027 = Utils.parseNumeric(row.plans_projects_2027_budget) || 0;
+      const planGap = Utils.parseNumeric(row.plans_2027_need_gap_score) || 0;
+
+      const climateExposure =
+        Math.min(1, drought / 3) * 35 +
+        Math.min(1, standing / 5000) * 20 +
+        Math.min(1, (reproductive + ripening) / 2500) * 15 +
+        Math.min(1, hazardDrought) * 15 +
+        Math.min(1, Math.max(hazardFlood, hazardTyphoon)) * 15;
+
+      const farmerVulnerability =
+        Math.min(1, poverty / 45) * 28 +
+        Math.min(1, (poorRice + poorCorn) / 3500) * 28 +
+        Math.min(1, Math.max(stunting, underweight, wasting) / 15) * 18 +
+        Math.min(1, (rsba4ps + rsbaIp + rsbaPwd) / 1200) * 16 +
+        Math.min(1, (Utils.parseNumeric(row.rsba_female_count) || 0) / 2500) * 10;
+
+      const productionSensitivity =
+        Math.min(1, soilStress / 100) * 24 +
+        Math.min(1, soilAcidic / 60) * 16 +
+        Math.min(1, soilNpk / 40) * 14 +
+        Math.min(1, soilZinc / 40) * 10 +
+        Math.min(1, irrigationGap / 100) * 18 +
+        Math.min(1, (riceArea + cornArea) / 25000) * 10 +
+        Math.max(0, Math.min(1, (4.5 - Math.max(riceYield, cornYield)) / 4.5)) * 8;
+
+      const assetCoverage =
+        Math.min(1, irrigationAssets / 5) * 0.25 +
+        Math.min(1, fmrAssets / 12) * 0.20 +
+        Math.min(1, postharvestAssets / 6) * 0.15 +
+        Math.min(1, f2c2Assets / 8) * 0.15 +
+        Math.min(1, (plannedIrrigation + plannedFmr) / 6) * 0.25;
+      const responseCapacityGap = (1 - Math.min(1, assetCoverage)) * 100;
+
+      const implementationGap =
+        Math.min(1, planGap / 100) * 65 +
+        (budget2027 <= 0 ? 20 : 0) +
+        (plannedIrrigation <= 0 && irrigationGap >= 50 ? 10 : 0) +
+        (plannedFmr <= 0 && fmrAssets <= 0 ? 5 : 0);
+
+      const overall =
+        climateExposure * 0.30 +
+        farmerVulnerability * 0.25 +
+        productionSensitivity * 0.20 +
+        responseCapacityGap * 0.10 +
+        Math.min(100, implementationGap) * 0.15;
+
+      row.elnino_resilience_climate_exposure_score = climateExposure.toFixed(1);
+      row.elnino_resilience_farmer_vulnerability_score = farmerVulnerability.toFixed(1);
+      row.elnino_resilience_production_sensitivity_score = productionSensitivity.toFixed(1);
+      row.elnino_resilience_response_capacity_gap_score = responseCapacityGap.toFixed(1);
+      row.elnino_resilience_implementation_gap_score = Math.min(100, implementationGap).toFixed(1);
+      row.elnino_resilience_priority_score = Math.min(100, overall).toFixed(1);
+      row.elnino_resilience_priority_class = classifyElNinoResilience(overall);
+    });
+  }
+
+  function classifyElNinoResilience(score) {
+    if (score >= 75) return "Critical Package Priority";
+    if (score >= 58) return "High Package Priority";
+    if (score >= 40) return "Moderate Package Priority";
+    if (score > 0) return "Watchlist";
+    return "Data Insufficient";
   }
 
   function classifyElNinoRisk(score) {

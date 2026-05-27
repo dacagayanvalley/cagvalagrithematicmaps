@@ -7,12 +7,12 @@ const APP_CONFIG = {
   title: "AgriSight Cagayan Valley",
   subtitle: "Agriculture, climate risk, and seasonal rice decision map",
   defaultView: "municipality",
-  defaultIndicator: "population",
-  defaultStyle: "choropleth",
+  defaultIndicator: "elnino_resilience_priority_score",
+  defaultStyle: "priority",
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260526-abemis-refresh",
+  assetVersion: "20260527-elnino-resilience",
 };
 
 // ============================================================
@@ -1397,6 +1397,66 @@ const INDICATOR_CONFIG = {
     colorScheme: "Reds",
     description: "Composite risk score combining PAGASA drought class, PRiSM standing rice, irrigation gap, poverty, and poor rice farmer exposure."
   },
+  elnino_resilience_priority_score: {
+    label: "El Nino Resilience Priority Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "Reds",
+    description: "Composite decision score combining climate exposure, farmer vulnerability, production sensitivity, response capacity gaps, and implementation gaps."
+  },
+  elnino_resilience_climate_exposure_score: {
+    label: "Climate Exposure Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "YlOrRd",
+    description: "Drought outlook, PRiSM standing/reproductive/ripening rice, drought hazard, and flood/typhoon exposure."
+  },
+  elnino_resilience_farmer_vulnerability_score: {
+    label: "Farmer Vulnerability Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "Oranges",
+    description: "Poverty, small rice/corn farms, malnutrition, and RSBSA social-targeting exposure."
+  },
+  elnino_resilience_production_sensitivity_score: {
+    label: "Production Sensitivity Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "PuRd",
+    description: "Soil stress, acidity, NPK, zinc, irrigation gap, crop area, and yield sensitivity."
+  },
+  elnino_resilience_response_capacity_gap_score: {
+    label: "Response Capacity Gap Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "Greys",
+    description: "Estimated gap after considering irrigation, FMR, postharvest, F2C2, and planned infrastructure coverage."
+  },
+  elnino_resilience_implementation_gap_score: {
+    label: "Implementation Gap Score",
+    category: "El Nino Resilience",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "population",
+    colorScheme: "Reds",
+    description: "Plan need gap, missing 2027 allocation, and missing irrigation/FMR plan signals."
+  },
 
   // --- DA Plans and Projects 2025-2027 ---
   plans_projects_2027_count: {
@@ -1781,6 +1841,7 @@ const CATEGORIES = [
   "PRiSM Rice Monitoring",
   "PRiSM Flood Damage",
   "El Nino Rice Risk",
+  "El Nino Resilience",
   "Plans & Projects",
   "Climate Risk Vulnerability",
   "Planning Priority"
@@ -2028,6 +2089,17 @@ const PRIORITY_MODELS = {
       elnino_irrigation_gap_pct: 0.10,
       poverty_2023: 0.075,
       poor_rice_farmers: 0.075
+    }
+  },
+  elnino_resilience: {
+    label: "El Nino Resilience Package Priority",
+    weights: {
+      elnino_resilience_priority_score: 0.30,
+      elnino_resilience_climate_exposure_score: 0.20,
+      elnino_resilience_farmer_vulnerability_score: 0.18,
+      elnino_resilience_production_sensitivity_score: 0.16,
+      elnino_resilience_implementation_gap_score: 0.10,
+      elnino_resilience_response_capacity_gap_score: 0.06
     }
   },
   projects: {
@@ -2286,6 +2358,16 @@ const PLANNING_INSIGHTS = [
     condition: (d) => parseFloat(d.elnino_rice_risk_score) >= 50,
     insight: "High El Nino rice exposure. Coordinate irrigation scheduling, field validation, and advisory support for standing rice areas.",
     icon: "El Nino", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.elnino_resilience_priority_score) >= 58,
+    insight: "High El Nino resilience package priority. Review climate exposure, farmer vulnerability, production constraints, and implementation gaps as one response package.",
+    icon: "Package", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.elnino_resilience_implementation_gap_score) >= 55,
+    insight: "Implementation gap is elevated. Check whether 2026-2027 plan items, procurement status, or encoded allocations are missing for this risk profile.",
+    icon: "Plan", level: "moderate"
   },
   {
     condition: (d) => parseFloat(d.elnino_prism_standing_exposed_area) > 1000,

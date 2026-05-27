@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=20260515-prism-refresh" />
+  <link rel="stylesheet" href="css/styles.css?v=20260527-elnino-resilience" />
 </head>
 <body>
 
@@ -40,7 +40,7 @@
       Choose a planning scenario, inspect the priority areas, then validate the recommended interventions with local field data before final decisions.
     </p>
     <div class="announcement-points">
-      <span>Use the Decision Scenario control to focus the map on rice, corn, nutrition, or climate-sensitive planning.</span>
+      <span>Use the Decision Scenario control to focus the map on El Nino resilience packages, rice, corn, nutrition, or climate-sensitive planning.</span>
       <span>Click a municipality to review its planning profile, evidence, and recommended next actions.</span>
       <span>Use facility and climate layers as validation context before exporting results.</span>
     </div>
@@ -109,6 +109,7 @@
       <label for="indicator-select">Indicator</label>
       <select id="indicator-select"></select>
       <div id="indicator-meta" class="indicator-meta"></div>
+      <div id="indicator-data-note" class="indicator-data-note"></div>
     </div>
 
     <!-- RSBSA Filters -->
@@ -152,6 +153,7 @@
       <label for="scenario-select">Planning Question</label>
       <select id="scenario-select"></select>
       <button class="btn-secondary scenario-apply" id="apply-scenario" type="button">Apply Scenario Map</button>
+      <button class="btn-secondary scenario-explain-btn" id="scenario-explain-toggle" type="button">Explain Scenario</button>
       <div class="scenario-help">Updates the priority model, recommendation panel, and suggested evidence to review.</div>
     </div>
 
@@ -221,6 +223,20 @@
     </div>
 
   </aside><!-- /sidebar -->
+
+  <div id="scenario-explainer" class="scenario-explainer" aria-hidden="true">
+    <div class="scenario-explainer-backdrop" id="scenario-explainer-backdrop"></div>
+    <section class="scenario-explainer-card" role="dialog" aria-modal="true" aria-labelledby="scenario-explainer-title">
+      <div class="scenario-explainer-head">
+        <div>
+          <div class="scenario-explainer-kicker">Decision Scenario Method</div>
+          <h2 id="scenario-explainer-title">Scenario explanation</h2>
+        </div>
+        <button class="scenario-explainer-close" id="scenario-explainer-close" type="button" aria-label="Close scenario explanation">&times;</button>
+      </div>
+      <div id="scenario-explainer-body" class="scenario-explainer-body"></div>
+    </section>
+  </div>
 
   <!-- ================================================================
        MAIN CONTENT
@@ -395,17 +411,17 @@
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
 <!-- App Modules (load in dependency order) -->
-<script src="js/config.js?v=20260515-prism-refresh"></script>
-<script src="js/utils.js?v=20260515-prism-refresh"></script>
-<script src="js/aggregation.js?v=20260515-prism-refresh"></script>
-<script src="js/dataLoader.js?v=20260515-prism-refresh"></script>
-<script src="js/priorityScoring.js?v=20260515-prism-refresh"></script>
-<script src="js/visualizations.js?v=20260515-prism-refresh"></script>
-<script src="js/mapLayers.js?v=20260515-prism-refresh"></script>
-<script src="js/charts.js?v=20260515-prism-refresh"></script>
-<script src="js/weatherOverlay.js?v=20260515-prism-refresh"></script>
-<script src="js/climate.js?v=20260515-prism-refresh"></script>
-<script src="js/app.js?v=20260515-prism-refresh"></script>
+<script src="js/config.js?v=20260527-elnino-resilience"></script>
+<script src="js/utils.js?v=20260527-elnino-resilience"></script>
+<script src="js/aggregation.js?v=20260527-elnino-resilience"></script>
+<script src="js/dataLoader.js?v=20260527-elnino-resilience"></script>
+<script src="js/priorityScoring.js?v=20260527-elnino-resilience"></script>
+<script src="js/visualizations.js?v=20260527-elnino-resilience"></script>
+<script src="js/mapLayers.js?v=20260527-elnino-resilience"></script>
+<script src="js/charts.js?v=20260527-elnino-resilience"></script>
+<script src="js/weatherOverlay.js?v=20260527-elnino-resilience"></script>
+<script src="js/climate.js?v=20260527-elnino-resilience"></script>
+<script src="js/app.js?v=20260527-elnino-resilience"></script>
 
 </body>
 </html>
