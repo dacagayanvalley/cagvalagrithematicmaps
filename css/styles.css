@@ -1341,6 +1341,75 @@ body[data-theme="dark"] .stat-card.stat-danger { background: #351719; }
   text-align: center;
 }
 
+.scenario-context-stack {
+  margin-top: 8px;
+}
+.scenario-context-grid {
+  display: grid;
+  gap: 7px;
+}
+.scenario-context-card {
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-bg-card);
+  padding: 8px;
+}
+.scenario-context-card h4 {
+  margin: 0 0 5px;
+  color: var(--color-primary);
+  font-size: 11px;
+}
+.scenario-context-card p {
+  margin: 0 0 6px;
+  color: var(--color-text-muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+.scenario-context-tags,
+.scenario-tool-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.scenario-context-tags span {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-primary-lt);
+  color: var(--color-primary-dk);
+  padding: 3px 6px;
+  font-size: 10px;
+}
+.scenario-context-table {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 7px;
+}
+.scenario-context-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: 3px;
+  font-size: 10.5px;
+}
+.scenario-context-row span { color: var(--color-text-muted); }
+.scenario-context-row b {
+  text-align: right;
+  color: var(--color-text);
+}
+.scenario-tool-btn {
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: white;
+  padding: 5px 7px;
+  font-size: 10.5px;
+  cursor: pointer;
+}
+.scenario-tool-btn:hover {
+  background: var(--color-primary-dk);
+}
+
 /* ============================================================
    TOAST NOTIFICATIONS
    ============================================================ */

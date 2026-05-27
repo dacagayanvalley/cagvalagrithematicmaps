@@ -295,5 +295,17 @@ const WeatherOverlay = (() => {
     });
   }
 
-  return { init: init, selectType: function(id) { activateLive(id); } };
+  return {
+    init: init,
+    selectType: function(id) { activateLive(id); },
+    getState: function() {
+      return {
+        activeType: activeType,
+        isPlaying: isPlaying,
+        opacity: opacity,
+        radarFrames: radarFrames.length,
+        satelliteFrames: satFrames.length
+      };
+    }
+  };
 })();

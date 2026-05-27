@@ -32,6 +32,7 @@ const App = (() => {
   let rankedDir = "top";
   let priorityModel = "elnino_resilience";
   let facilitiesLoaded = false;
+  let selectedCentroid = null;
 
   const DECISION_SCENARIOS = {
     rice: {
@@ -711,6 +712,8 @@ const App = (() => {
       </div>`;
     }
 
+    html += renderScenarioAnalysisStack(selectedRow, topRows, scenario);
+
     panel.innerHTML = html;
   }
 
@@ -831,6 +834,122 @@ const App = (() => {
       <span class="decision-rank-name">${name}</span>
       <span class="decision-rank-score">${row._priorityScore ?? "N/A"}</span>
     </div>`;
+  }
+
+  function renderScenarioAnalysisStack(selectedRow, topRows, scenario) {
+    const contextRow = selectedRow || topRows[0] || null;
+    const rsbaSummary = getRsbaScenarioFilterSummary();
+    const climateRows = getScenarioClimateEvidence(contextRow, scenario)
+      .map(item => `<div class="scenario-context-row"><span>${escapeHTML(item.label)}</span><b>${escapeHTML(item.value)}</b></div>`)
+      .join("");
+    const targetLabel = contextRow ? Utils.getAreaName(contextRow) : "Click an area";
+
+    return `<div class="scenario-context-stack">
+      <div class="decision-block-title">Scenario Analysis Stack</div>
+      <div class="scenario-context-grid">
+        <div class="scenario-context-card">
+          <h4>RSBSA Targeting Filters</h4>
+          <p>${escapeHTML(rsbaSummary.description)}</p>
+          <div class="scenario-context-tags">${rsbaSummary.tags.map(tag => `<span>${escapeHTML(tag)}</span>`).join("")}</div>
+        </div>
+        <div class="scenario-context-card">
+          <h4>Climate Info Validation</h4>
+          <p>Use Climate Info for ${escapeHTML(targetLabel)} to check current conditions, 7-day forecast, climate normals, and PAGASA links before final timing.</p>
+          <div class="scenario-context-table">${climateRows || `<div class="scenario-context-row"><span>Status</span><b>Select an area</b></div>`}</div>
+          <button class="scenario-tool-btn" data-scenario-tool="climate" type="button">Open Climate Info</button>
+        </div>
+        <div class="scenario-context-card">
+          <h4>Weather Layer Checks</h4>
+          <p>Use weather layers as the near-term operational screen after the priority score identifies where to look.</p>
+          <div class="scenario-context-tags">
+            <span>Radar: rainfall nowcast</span>
+            <span>Satellite: cloud buildup</span>
+            <span>10-day forecast: field schedule</span>
+          </div>
+          <div class="scenario-tool-row">
+            <button class="scenario-tool-btn" data-scenario-tool="radar" type="button">Load Radar</button>
+            <button class="scenario-tool-btn" data-scenario-tool="satellite" type="button">Load Satellite</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function getRsbaScenarioFilterSummary() {
+    const tags = [];
+    const farmSizeLabels = {
+      all: "All farm sizes",
+      lt_0_5: "Below 0.5 ha average",
+      "0_5_1": "0.5 to 1 ha average",
+      "1_2": "1 to 2 ha average",
+      gt_2: "Above 2 ha average"
+    };
+    const cropLabels = {
+      all: "All crops",
+      rice: "Rice/Palay records",
+      corn: "Corn records",
+      hvc: "High-value crop records"
+    };
+    const attributeLabels = {
+      all: "All registry records",
+      farmer: "Farmers",
+      farmworker: "Farmworkers",
+      fisherfolk: "Fisherfolk",
+      female: "Female records",
+      youth: "Youth records",
+      "4ps": "4Ps records",
+      ip: "IP records",
+      pwd: "PWD records",
+      fca: "FCA members",
+      imc: "With IMC"
+    };
+
+    tags.push(`Farm size: ${farmSizeLabels[rsbaFarmSizeFilter] || rsbaFarmSizeFilter}`);
+    tags.push(`Crop: ${cropLabels[rsbaCropFilter] || rsbaCropFilter}`);
+    tags.push(`Attribute: ${attributeLabels[rsbaAttributeFilter] || rsbaAttributeFilter}`);
+
+    const active = [rsbaFarmSizeFilter, rsbaCropFilter, rsbaAttributeFilter].some(v => v !== "all");
+    const total = DataLoader.getMunicipalRows().length;
+    const filtered = getFilteredMunicipalRows().length;
+    return {
+      tags,
+      description: active
+        ? `Scenario scores are narrowed to ${filtered} of ${total} municipalities that match the active RSBSA filters.`
+        : "No RSBSA filter is active. Scenario scores use all municipalities in the current view."
+    };
+  }
+
+  function getScenarioClimateEvidence(row, scenario) {
+    if (!row) return [];
+    const fields = [
+      "pagasa_drought_outlook",
+      "pagasa_drought_score",
+      "elnino_rice_risk_score",
+      "elnino_prism_standing_exposed_area",
+      "elnino_irrigation_gap_pct",
+      "hazard_drought",
+      "hazard_flood",
+      "hazard_typhoon",
+      "ac_index",
+      "ac_anticipatory",
+      "elnino_resilience_climate_exposure_score",
+      "elnino_resilience_response_capacity_gap_score"
+    ];
+    const scenarioFields = scenario.evidence.filter(field =>
+      field.includes("climate") ||
+      field.includes("hazard") ||
+      field.includes("drought") ||
+      field.includes("elnino") ||
+      field.includes("prism") ||
+      field.includes("irrigation")
+    );
+    return [...new Set([...scenarioFields, ...fields])]
+      .filter(field => row[field] !== undefined && row[field] !== null && row[field] !== "")
+      .slice(0, 8)
+      .map(field => ({
+        label: INDICATOR_CONFIG[field]?.label || field.replace(/_/g, " "),
+        value: INDICATOR_CONFIG[field]?.type === "categorical" ? String(row[field]) : Utils.formatValue(row[field], field)
+      }));
   }
 
   function renderEvidence(row, field) {
@@ -1042,6 +1161,7 @@ const App = (() => {
     const totalWeight = weights.reduce((sum, [, weight]) => sum + weight, 0) || 1;
     const evidenceRows = scenario.evidence.map(field => renderScenarioEvidenceField(field)).join("");
     const weightRows = weights.map(([field, weight]) => renderScenarioWeightField(field, weight, totalWeight)).join("");
+    const rsbaSummary = getRsbaScenarioFilterSummary();
 
     body.innerHTML = `
       <div class="scenario-explain-grid">
@@ -1073,6 +1193,12 @@ const App = (() => {
           <div class="scenario-evidence-list">
             ${evidenceRows}
           </div>
+        </section>
+
+        <section class="scenario-explain-section">
+          <h3>RSBSA, Climate, and Weather Mix</h3>
+          <p>${escapeHTML(rsbaSummary.description)} Climate Info and Weather Layers are used as validation context: they do not replace the score, but they decide whether the priority is ready for action now, should be delayed, or needs field confirmation.</p>
+          <div class="scenario-context-tags">${rsbaSummary.tags.map(tag => `<span>${escapeHTML(tag)}</span>`).join("")}</div>
         </section>
 
         <section class="scenario-explain-section">
@@ -1249,6 +1375,7 @@ const App = (() => {
   function disengageScenarioModeForIndicator() {
     scenarioModeActive = false;
     selectedArea = null;
+    selectedCentroid = null;
     currentVizStyle = "choropleth";
     const vizSel = document.getElementById("viz-select");
     if (vizSel) vizSel.value = currentVizStyle;
@@ -1263,6 +1390,7 @@ const App = (() => {
   function setView(viewType) {
     currentView = viewType;
     selectedArea = null;
+    selectedCentroid = null;
     document.querySelectorAll(".view-btn").forEach(btn => {
       btn.classList.toggle("active", btn.dataset.view === viewType);
     });
@@ -1445,6 +1573,9 @@ const App = (() => {
       if (e.target.classList.contains("basemap-btn")) {
         MapLayers.switchBasemap(e.target.dataset.basemap);
       }
+      if (e.target.classList.contains("scenario-tool-btn")) {
+        handleScenarioTool(e.target.dataset.scenarioTool);
+      }
     });
 
     // Compare A/B
@@ -1573,6 +1704,7 @@ const App = (() => {
 
     window.addEventListener("area:selected", (e) => {
       selectedArea = e.detail?.properties || null;
+      selectedCentroid = e.detail?.centroid || null;
       if (selectedArea) updateDashboard([selectedArea]);
       updatePlanningInsights();
     });
@@ -1635,6 +1767,7 @@ const App = (() => {
     rsbaCropFilter = "all";
     rsbaAttributeFilter = "all";
     selectedArea = null;
+    selectedCentroid = null;
 
     setView(APP_CONFIG.defaultView || "municipality");
     syncDefaultControls();
@@ -1717,6 +1850,31 @@ const App = (() => {
     if (!catCb) return;
     catCb.indeterminate = checkedCount > 0 && checkedCount < typeKeys.length;
     catCb.checked = checkedCount === typeKeys.length;
+  }
+
+  function handleScenarioTool(tool) {
+    if (tool === "climate") {
+      openClimateForScenario();
+      return;
+    }
+    if (tool === "radar" || tool === "satellite") {
+      if (typeof WeatherOverlay !== "undefined") {
+        WeatherOverlay.selectType(tool);
+        Utils.showToast(`${tool === "radar" ? "Radar" : "Satellite"} weather layer loading.`, "info");
+      } else {
+        Utils.showToast("Weather layers are not available in this session.", "warning");
+      }
+    }
+  }
+
+  function openClimateForScenario() {
+    if (typeof ClimatePanel === "undefined") {
+      Utils.showToast("Climate Info is not available in this session.", "warning");
+      return;
+    }
+    const name = selectedArea ? Utils.getAreaName(selectedArea) : "Tuguegarao City, Cagayan";
+    const centroid = selectedCentroid || APP_CONFIG.mapCenter;
+    ClimatePanel.openForLocation(centroid[0], centroid[1], name);
   }
 
   // ============================================================
