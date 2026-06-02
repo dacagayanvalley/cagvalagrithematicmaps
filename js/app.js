@@ -76,11 +76,23 @@ const App = (() => {
       question: "Where should climate-resilient and risk-reduction support be checked first?",
       category: "Climate Risk Vulnerability",
       indicator: "crva_index_rice",
-      evidence: ["crva_index_rice", "hazard_index", "hazard_flood", "hazard_drought", "ac_index", "pest_disease_occurrence", "asf_status"],
+      evidence: ["crva_index_rice", "hazard_index", "hazard_flood", "hazard_drought", "ac_index", "pest_disease_occurrence", "asf_status", "asf_risk_score"],
       actions: [
         "Open the Climate Info panel and validate hazard exposure with local observations.",
         "Check adaptive capacity gaps before selecting climate-resilient agriculture packages.",
         "Coordinate crop, livestock, DRRM, and extension support where risks overlap."
+      ]
+    },
+    asf_biosecurity: {
+      label: "Validate ASF biosecurity response",
+      question: "Where do sanitized ASF laboratory results point to livestock biosecurity and surveillance needs?",
+      category: "ASF",
+      indicator: "asf_risk_score",
+      evidence: ["asf_risk_score", "asf_status", "asf_positive_total", "asf_positive_rate_pct", "asf_sample_total", "asf_affected_barangays", "asf_tested_barangays", "asf_latest_report_date", "abemis_swine_housing_count"],
+      actions: [
+        "Use municipal and barangay aggregate counts only; do not display farmer names or farm identifiers.",
+        "Validate affected barangays with veterinary field teams before movement control, disinfection, or restocking actions.",
+        "Cross-check livestock facility support and swine housing projects against ASF risk before programming."
       ]
     },
     soil_rehab: {
@@ -184,11 +196,35 @@ const App = (() => {
       question: "Where are current PRiSM standing rice areas exposed to dry spell or drought conditions?",
       category: "El Nino Rice Risk",
       indicator: "elnino_rice_risk_score",
-      evidence: ["pagasa_drought_outlook", "elnino_rice_risk_score", "elnino_prism_standing_exposed_area", "prism_standing_crop_area", "prism_growth_reproductive_ha", "prism_growth_ripening_ha", "elnino_irrigation_gap_pct", "poverty_2023", "poor_rice_farmers"],
+      evidence: ["pagasa_drought_outlook", "pagasa_powerbi_agri_risk_score", "pagasa_powerbi_rainfall_deficit_score", "pagasa_powerbi_dry_spell_probability_pct", "elnino_rice_risk_score", "elnino_prism_standing_exposed_area", "prism_standing_crop_area", "prism_growth_reproductive_ha", "prism_growth_ripening_ha", "elnino_irrigation_gap_pct", "poverty_2023", "poor_rice_farmers"],
       actions: [
-        "Validate dry-spell or drought status with the latest PAGASA advisory before field deployment.",
+        "Validate dry-spell or drought status with the embedded PAGASA Power BI report and the latest PAGASA advisory before field deployment.",
         "Prioritize irrigation scheduling, water-source checks, and crop water-stress monitoring where standing rice exposure is high.",
         "Coordinate farmer advisories, crop insurance checks, and LGU/DA response where poverty and poor rice farmer exposure are also high."
+      ]
+    },
+    pagasa_validation: {
+      label: "Validate PAGASA advisory exposure",
+      question: "Where do PAGASA Power BI climate signals overlap with standing rice, vulnerable farmers, irrigation gaps, and weak plan coverage?",
+      category: "El Nino Rice Risk",
+      indicator: "pagasa_powerbi_agri_risk_score",
+      evidence: [
+        "pagasa_powerbi_agri_risk_score",
+        "pagasa_powerbi_rainfall_mm",
+        "pagasa_powerbi_rainfall_anomaly_pct",
+        "pagasa_powerbi_rainfall_deficit_score",
+        "pagasa_powerbi_drought_class",
+        "pagasa_powerbi_dry_spell_probability_pct",
+        "pagasa_powerbi_heat_stress_days",
+        "prism_standing_crop_area",
+        "elnino_irrigation_gap_pct",
+        "poor_rice_farmers",
+        "plans_2027_need_gap_score"
+      ],
+      actions: [
+        "Open the Climate Info panel, review the PAGASA Power BI report, and confirm the validity period before using the score operationally.",
+        "Check whether rainfall deficit, dry-spell probability, or heat stress overlaps with PRiSM standing rice and reproductive or ripening stages.",
+        "Use the result as a validation screen for field advisories, irrigation scheduling, seed reserve, crop insurance, and 2027 plan gap review."
       ]
     },
     elnino_resilience: {
@@ -204,12 +240,15 @@ const App = (() => {
         "elnino_resilience_response_capacity_gap_score",
         "elnino_resilience_implementation_gap_score",
         "pagasa_drought_outlook",
+        "pagasa_powerbi_agri_risk_score",
+        "pagasa_powerbi_rainfall_deficit_score",
+        "pagasa_powerbi_dry_spell_probability_pct",
         "prism_standing_crop_area",
         "soil_fertility_stress_score",
         "plans_2027_need_gap_score"
       ],
       actions: [
-        "Validate the risk drivers with LGU, AEW, PRiSM, PAGASA, and field reports before final deployment.",
+        "Validate the risk drivers with LGU, AEW, PRiSM, PAGASA Power BI, and field reports before final deployment.",
         "Bundle support by need: water access, crop shift or recovery inputs, soil correction, pest surveillance, postharvest, and beneficiary safeguards.",
         "Check whether 2026 status and 2027 plan items already cover the package, then flag missing allocations or procurement bottlenecks."
       ]
@@ -924,6 +963,9 @@ const App = (() => {
     const fields = [
       "pagasa_drought_outlook",
       "pagasa_drought_score",
+      "pagasa_powerbi_agri_risk_score",
+      "pagasa_powerbi_rainfall_deficit_score",
+      "pagasa_powerbi_dry_spell_probability_pct",
       "elnino_rice_risk_score",
       "elnino_prism_standing_exposed_area",
       "elnino_irrigation_gap_pct",
@@ -937,9 +979,11 @@ const App = (() => {
     ];
     const scenarioFields = scenario.evidence.filter(field =>
       field.includes("climate") ||
+      field.includes("pagasa") ||
       field.includes("hazard") ||
       field.includes("drought") ||
       field.includes("elnino") ||
+      field.includes("asf") ||
       field.includes("prism") ||
       field.includes("irrigation")
     );
@@ -1103,6 +1147,7 @@ const App = (() => {
     if (field.startsWith("abemis_")) return "Refresh from the latest ABEMIS infrastructure inventory workbook when new projects, beneficiaries, costs, or barangay corrections are available.";
     if (field.startsWith("rsba_")) return "Refresh from the latest RSBSA source if registry counts, crop area, FCA, IMC, or inclusion fields change.";
     if (field.startsWith("prism_")) return "Refresh from the latest PRiSM season output before operational rice monitoring or disaster-response use.";
+    if (field.startsWith("pagasa_powerbi_")) return "Refresh data/pagasa_powerbi_climate_extract.csv from the latest PAGASA Power BI report before operational climate validation.";
     if (field.startsWith("soil_")) return "Add updated soil-test records when new laboratory results, crop-specific ratings, or barangay coverage become available.";
     if (field.startsWith("fmr_")) return "Refresh FMR inventory records when project status, length, beneficiaries, or influence area changes.";
     if (field.startsWith("f2c2_")) return "Refresh F2C2/FCA cluster records when membership, area, commodities, or enterprise monitoring updates are available.";
@@ -1242,7 +1287,7 @@ const App = (() => {
       corn_mechanization_gap: "Corn Mechanization Gap",
       irrigation_gap: "Irrigation Gap",
       pest_disease_score: "Pest and Disease Score",
-      asf_score: "ASF Score",
+      asf_score: "ASF Lab Risk Score",
       soil_fertility_gap: "Soil Fertility Gap",
       prism_area_gap_abs: "Absolute PRiSM Area Gap"
     };
@@ -1257,7 +1302,7 @@ const App = (() => {
       corn_mechanization_gap: "Lower mechanization levels can limit corn land preparation, harvest, and postharvest efficiency.",
       irrigation_gap: "Lower irrigation coverage raises exposure to dry spells and weakens production reliability.",
       pest_disease_score: "Higher pest or disease status can quickly reduce yield and should influence response priority.",
-      asf_score: "Higher ASF risk requires biosecurity coordination before livestock-related support.",
+      asf_score: "Higher sanitized ASF laboratory risk requires biosecurity coordination before livestock-related support.",
       soil_fertility_gap: "Low soil fertility receives a higher score because it can suppress crop response to other interventions.",
       prism_area_gap_abs: "Large gaps between PRiSM and reference area suggest the area should be validated before final targeting."
     };

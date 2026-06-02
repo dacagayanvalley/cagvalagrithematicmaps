@@ -76,8 +76,19 @@ Primary attribute data lives in:
 
 - `data/municipal_data.csv`
 - `data/facilities.csv`
+- `data/pagasa_powerbi_climate_extract.csv`
+- `data/asf_municipal_summary.csv`
+- `data/asf_barangay_summary.csv`
 
 Municipal CSV rows are joined to GeoJSON features using PSGC codes first, then normalized province and municipality names.
+
+`pagasa_powerbi_climate_extract.csv` is the optional municipal/provincial extraction layer for the embedded PAGASA Power BI report in the Climate Info panel. Replace its placeholder values with the latest PAGASA Power BI rainfall, anomaly, dry-spell, heat-stress, and agri-risk fields before using PAGASA-driven scenario scores operationally.
+
+`asf_municipal_summary.csv` and `asf_barangay_summary.csv` are sanitized ASF laboratory-result aggregates from the shared Google Sheet. Farmer names, extension names, and farm/slaughterhouse/agency identifiers are intentionally excluded. Refresh them with:
+
+```bash
+python scripts/extract_asf_google_sheet.py
+```
 
 ## Updating Data
 

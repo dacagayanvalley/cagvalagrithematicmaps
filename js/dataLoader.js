@@ -11,6 +11,9 @@ const DataLoader = (() => {
   let barangayFarmData = [];
   let prismData = [];
   let droughtOutlookData = [];
+  let pagasaPowerBiData = [];
+  let asfSummaryData = [];
+  let asfBarangayData = [];
   let plansProjectsData = [];
   let soilFertilityData = [];
   let fmrProjectsData = [];
@@ -153,6 +156,36 @@ const DataLoader = (() => {
     }
 
     try {
+      pagasaPowerBiData = await fetchCSV(dataPath + "pagasa_powerbi_climate_extract.csv");
+      mergePagasaPowerBiData(pagasaPowerBiData);
+      console.info(`Loaded pagasa_powerbi_climate_extract.csv: ${pagasaPowerBiData.length} records`);
+    } catch (e) {
+      console.warn("pagasa_powerbi_climate_extract.csv not found. PAGASA Power BI overlay indicators will use defaults.", e);
+      pagasaPowerBiData = [];
+      addPagasaPowerBiDefaults();
+    }
+
+    try {
+      asfSummaryData = await fetchCSV(dataPath + "asf_municipal_summary.csv");
+      mergeAsfSummaryData(asfSummaryData);
+      console.info(`Loaded asf_municipal_summary.csv: ${asfSummaryData.length} records`);
+    } catch (e) {
+      console.warn("asf_municipal_summary.csv not found. ASF indicators will use defaults.", e);
+      asfSummaryData = [];
+      addAsfDefaults();
+    }
+
+    try {
+      asfBarangayData = await fetchCSV(dataPath + "asf_barangay_summary.csv");
+      mergeAsfBarangayData(asfBarangayData);
+      console.info(`Loaded asf_barangay_summary.csv: ${asfBarangayData.length} records`);
+    } catch (e) {
+      console.warn("asf_barangay_summary.csv not found. ASF barangay indicators will use defaults.", e);
+      asfBarangayData = [];
+      addAsfBarangayDefaults();
+    }
+
+    try {
       plansProjectsData = await fetchCSV(dataPath + "plans_projects_2025_2027.csv");
       mergePlansProjectsData(plansProjectsData);
       console.info(`Loaded plans_projects_2025_2027.csv: ${plansProjectsData.length} records`);
@@ -278,6 +311,7 @@ const DataLoader = (() => {
       barangayFarmData,
       prismData,
       droughtOutlookData,
+      pagasaPowerBiData,
       plansProjectsData,
       soilFertilityData,
       fmrProjectsData,
@@ -538,6 +572,95 @@ const DataLoader = (() => {
       if (!outlook) return;
       Object.assign(row, outlook);
       addElNinoRiskDerivedFields(row);
+    });
+  }
+
+  function mergePagasaPowerBiData(rows) {
+    rows.forEach(powerBiRow => {
+      const provinceNorm = Utils.normalizeName(powerBiRow.province);
+      const municipalityNorm = Utils.normalizeName(powerBiRow.municipality);
+      if (provinceNorm && !municipalityNorm) {
+        Object.values(municipalData)
+          .filter(candidate => Utils.normalizeName(candidate.province) === provinceNorm)
+          .forEach(candidate => assignPagasaPowerBiFields(candidate, powerBiRow));
+        return;
+      }
+
+      const row = findMunicipalDataRow(powerBiRow.province, powerBiRow.municipality);
+      if (!row) {
+        if (!provinceNorm) {
+          joinMismatches.push({
+            type: "pagasa_powerbi_no_csv",
+            name: `${powerBiRow.municipality || "Unknown"}, ${powerBiRow.province || "Unknown"}`,
+            message: "PAGASA Power BI row has no matching municipal_data.csv row"
+          });
+          return;
+        }
+
+        Object.values(municipalData)
+          .filter(candidate => Utils.normalizeName(candidate.province) === provinceNorm)
+          .forEach(candidate => assignPagasaPowerBiFields(candidate, powerBiRow));
+        return;
+      }
+
+      assignPagasaPowerBiFields(row, powerBiRow);
+    });
+
+    addPagasaPowerBiDefaults();
+  }
+
+  function mergeAsfSummaryData(rows) {
+    rows.forEach(asfRow => {
+      const row = findMunicipalDataRow(asfRow.province, asfRow.municipality);
+      if (!row) {
+        joinMismatches.push({
+          type: "asf_no_csv",
+          name: `${asfRow.municipality}, ${asfRow.province}`,
+          message: "ASF municipal summary row has no matching municipal_data.csv row"
+        });
+        return;
+      }
+      assignAsfFields(row, asfRow);
+    });
+
+    addAsfDefaults();
+  }
+
+  function mergeAsfBarangayData(rows) {
+    if (!barangayGeoJSON) return;
+
+    const byName = {};
+    rows.forEach(row => {
+      const key = buildBarangayKey(row.province, row.municipality, row.barangay);
+      if (key) byName[key] = row;
+    });
+
+    let matched = 0;
+    barangayGeoJSON.features.forEach(feature => {
+      const props = feature.properties || {};
+      const province = props.province || props.Province || props.ADM2_EN || props.PROVINCE || "";
+      const municipality = props.municipality || props.Municipality || props.ADM3_EN || props.NAME_3 || "";
+      const barangay = props.barangay || props.Barangay || props.ADM4_EN || props.NAME || "";
+      const match = byName[buildBarangayKey(province, municipality, barangay)];
+      if (match) {
+        assignAsfFields(props, match);
+        matched++;
+      }
+    });
+
+    addAsfBarangayDefaults();
+    console.info(`ASF barangay join complete: ${matched} matched features`);
+  }
+
+  function assignAsfFields(target, source) {
+    Object.entries(source).forEach(([key, value]) => {
+      if (key.startsWith("asf_")) target[key] = value;
+    });
+  }
+
+  function assignPagasaPowerBiFields(target, source) {
+    Object.entries(source).forEach(([key, value]) => {
+      if (key.startsWith("pagasa_powerbi_")) target[key] = value;
     });
   }
 
@@ -827,6 +950,82 @@ const DataLoader = (() => {
     });
   }
 
+  function addPagasaPowerBiDefaults() {
+    const numericFields = [
+      "pagasa_powerbi_rainfall_mm",
+      "pagasa_powerbi_rainfall_anomaly_pct",
+      "pagasa_powerbi_rainfall_deficit_score",
+      "pagasa_powerbi_dry_spell_probability_pct",
+      "pagasa_powerbi_heat_stress_days",
+      "pagasa_powerbi_agri_risk_score"
+    ];
+
+    Object.values(municipalData).forEach(row => {
+      const anomaly = Utils.parseNumeric(row.pagasa_powerbi_rainfall_anomaly_pct);
+      if (anomaly !== null) {
+        row.pagasa_powerbi_rainfall_deficit_score = Math.min(100, Math.max(0, -anomaly) * (100 / 60)).toFixed(1);
+      }
+      numericFields.forEach(field => {
+        if (row[field] === undefined || row[field] === null || row[field] === "") row[field] = "0";
+      });
+      [
+        "pagasa_powerbi_drought_class",
+        "pagasa_powerbi_valid_from",
+        "pagasa_powerbi_valid_to",
+        "pagasa_powerbi_source_url",
+        "pagasa_powerbi_notes"
+      ].forEach(field => {
+        if (row[field] === undefined || row[field] === null) row[field] = "";
+      });
+    });
+  }
+
+  function addAsfDefaults() {
+    Object.values(municipalData).forEach(row => addAsfDefaultsToRow(row));
+  }
+
+  function addAsfBarangayDefaults() {
+    if (!barangayGeoJSON) return;
+    barangayGeoJSON.features.forEach(feature => addAsfDefaultsToRow(feature.properties || {}));
+  }
+
+  function addAsfDefaultsToRow(row) {
+    const numericFields = [
+      "asf_lab_records",
+      "asf_sample_total",
+      "asf_positive_total",
+      "asf_negative_total",
+      "asf_positive_rate_pct",
+      "asf_tested_barangays",
+      "asf_affected_barangays",
+      "asf_risk_score",
+      "asf_whole_blood_samples",
+      "asf_whole_blood_positive",
+      "asf_whole_blood_negative",
+      "asf_organ_samples",
+      "asf_organ_positive",
+      "asf_organ_negative",
+      "asf_environmental_swab_samples",
+      "asf_environmental_swab_positive",
+      "asf_environmental_swab_negative",
+      "asf_fecal_swab_samples",
+      "asf_fecal_swab_positive",
+      "asf_fecal_swab_negative",
+      "asf_meat_products_samples",
+      "asf_meat_products_positive",
+      "asf_meat_products_negative"
+    ];
+    numericFields.forEach(field => {
+      if (row[field] === undefined || row[field] === null || row[field] === "") row[field] = "0";
+    });
+    if (row.asf_status === undefined || row.asf_status === null || row.asf_status === "") row.asf_status = "Clear";
+    if (row.asf_first_report_date === undefined || row.asf_first_report_date === null) row.asf_first_report_date = "";
+    if (row.asf_latest_report_date === undefined || row.asf_latest_report_date === null) row.asf_latest_report_date = "";
+    if (row.asf_source_note === undefined || row.asf_source_note === null) {
+      row.asf_source_note = "Sanitized aggregate ASF laboratory summary; no farmer names or farm identifiers displayed.";
+    }
+  }
+
   function getAbemisIndicatorKeys() {
     return Object.entries(INDICATOR_CONFIG)
       .filter(([, cfg]) => cfg.category === "ABEMIS Database")
@@ -1026,6 +1225,10 @@ const DataLoader = (() => {
       addPlansDerivedFields(row);
 
       const drought = Utils.parseNumeric(row.pagasa_drought_score) || 0;
+      const powerBiRisk = Utils.parseNumeric(row.pagasa_powerbi_agri_risk_score) || 0;
+      const rainfallDeficit = Math.max(0, -(Utils.parseNumeric(row.pagasa_powerbi_rainfall_anomaly_pct) || 0));
+      const drySpellProbability = Utils.parseNumeric(row.pagasa_powerbi_dry_spell_probability_pct) || 0;
+      const heatStressDays = Utils.parseNumeric(row.pagasa_powerbi_heat_stress_days) || 0;
       const standing = Utils.parseNumeric(row.prism_standing_crop_area) || 0;
       const reproductive = Utils.parseNumeric(row.prism_growth_reproductive_ha) || 0;
       const ripening = Utils.parseNumeric(row.prism_growth_ripening_ha) || 0;
@@ -1063,10 +1266,14 @@ const DataLoader = (() => {
       const planGap = Utils.parseNumeric(row.plans_2027_need_gap_score) || 0;
 
       const climateExposure =
-        Math.min(1, drought / 3) * 35 +
+        Math.min(1, drought / 3) * 25 +
+        Math.min(1, powerBiRisk / 100) * 12 +
+        Math.min(1, rainfallDeficit / 60) * 8 +
+        Math.min(1, drySpellProbability / 100) * 5 +
+        Math.min(1, heatStressDays / 10) * 5 +
         Math.min(1, standing / 5000) * 20 +
         Math.min(1, (reproductive + ripening) / 2500) * 15 +
-        Math.min(1, hazardDrought) * 15 +
+        Math.min(1, hazardDrought) * 10 +
         Math.min(1, Math.max(hazardFlood, hazardTyphoon)) * 15;
 
       const farmerVulnerability =
@@ -1235,6 +1442,9 @@ const DataLoader = (() => {
     get barangayFarmData() { return barangayFarmData; },
     get prismData() { return prismData; },
     get droughtOutlookData() { return droughtOutlookData; },
+    get pagasaPowerBiData() { return pagasaPowerBiData; },
+    get asfSummaryData() { return asfSummaryData; },
+    get asfBarangayData() { return asfBarangayData; },
     get plansProjectsData() { return plansProjectsData; },
     get soilFertilityData() { return soilFertilityData; },
     get fmrProjectsData() { return fmrProjectsData; },

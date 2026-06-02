@@ -12,7 +12,7 @@ const APP_CONFIG = {
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260527-elnino-resilience",
+  assetVersion: "20260602-asf-google-sheet",
 };
 
 // ============================================================
@@ -282,7 +282,126 @@ const INDICATOR_CONFIG = {
     aggregation: "dominant",
     colorScheme: "Reds",
     categories: { "Affected": 2, "At-risk": 1, "Clear": 0 },
-    description: "African Swine Fever status"
+    description: "African Swine Fever status derived from sanitized laboratory-result aggregates"
+  },
+  asf_risk_score: {
+    label: "ASF Lab Risk Score",
+    category: "ASF",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "asf_sample_total",
+    colorScheme: "Reds",
+    description: "Composite ASF laboratory risk score from positive results, positivity rate, affected barangay count, and sample volume. Farmer names and farm identifiers are excluded."
+  },
+  asf_positive_total: {
+    label: "ASF Positive Samples",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Total positive ASF laboratory results in the sanitized aggregate."
+  },
+  asf_negative_total: {
+    label: "ASF Negative Samples",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Blues",
+    description: "Total negative ASF laboratory results in the sanitized aggregate."
+  },
+  asf_sample_total: {
+    label: "ASF Samples Tested",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "Total ASF laboratory samples recorded after removing personal identifying fields."
+  },
+  asf_positive_rate_pct: {
+    label: "ASF Positivity Rate",
+    category: "ASF",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "asf_sample_total",
+    colorScheme: "Reds",
+    description: "ASF positive sample share from sanitized laboratory aggregates."
+  },
+  asf_affected_barangays: {
+    label: "ASF Affected Barangays",
+    category: "ASF",
+    type: "numeric",
+    unit: "barangays",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Number of barangays with at least one positive ASF laboratory result."
+  },
+  asf_tested_barangays: {
+    label: "ASF Tested Barangays",
+    category: "ASF",
+    type: "numeric",
+    unit: "barangays",
+    aggregation: "sum",
+    colorScheme: "Blues",
+    description: "Number of barangays represented in ASF laboratory testing records."
+  },
+  asf_lab_records: {
+    label: "ASF Lab Result Records",
+    category: "ASF",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Greys",
+    description: "Count of ASF laboratory-result rows summarized after excluding personal identifiers."
+  },
+  asf_whole_blood_positive: {
+    label: "ASF Whole Blood Positives",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Positive whole-blood ASF laboratory samples."
+  },
+  asf_organ_positive: {
+    label: "ASF Organ Positives",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Positive organ-sample ASF laboratory results."
+  },
+  asf_environmental_swab_positive: {
+    label: "ASF Environmental Swab Positives",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Positive environmental-swab ASF laboratory results."
+  },
+  asf_fecal_swab_positive: {
+    label: "ASF Fecal Swab Positives",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Positive fecal or fecal-swab ASF laboratory results."
+  },
+  asf_meat_products_positive: {
+    label: "ASF Meat Product Positives",
+    category: "ASF",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Positive meat-product or other ASF laboratory results."
   },
   soil_fertility: {
     label: "Soil Fertility",
@@ -1368,6 +1487,76 @@ const INDICATOR_CONFIG = {
     colorScheme: "YlOrRd",
     description: "Numeric drought class: 0=not affected, 1=dry condition, 2=dry spell, 3=drought."
   },
+  pagasa_powerbi_rainfall_mm: {
+    label: "PAGASA Power BI Rainfall",
+    category: "El Nino Rice Risk",
+    type: "numeric",
+    unit: "mm",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "Blues",
+    description: "Rainfall amount extracted from the PAGASA Power BI report for the latest available climate advisory period."
+  },
+  pagasa_powerbi_rainfall_anomaly_pct: {
+    label: "PAGASA Power BI Rainfall Anomaly",
+    category: "El Nino Rice Risk",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "RdBu_r",
+    description: "Rainfall anomaly from the PAGASA Power BI report. Negative values indicate rainfall deficit."
+  },
+  pagasa_powerbi_rainfall_deficit_score: {
+    label: "PAGASA Power BI Rainfall Deficit Score",
+    category: "El Nino Rice Risk",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "YlOrRd",
+    description: "Positive risk score derived from negative PAGASA Power BI rainfall anomaly. Higher values indicate stronger rainfall deficit."
+  },
+  pagasa_powerbi_drought_class: {
+    label: "PAGASA Power BI Drought Class",
+    category: "El Nino Rice Risk",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "YlOrRd",
+    categories: { "Drought": 3, "Dry Spell": 2, "Dry Condition": 1, "Not Affected": 0 },
+    description: "Drought or dry-spell class extracted from the PAGASA Power BI report, used as a current advisory validation layer."
+  },
+  pagasa_powerbi_dry_spell_probability_pct: {
+    label: "PAGASA Power BI Dry Spell Probability",
+    category: "El Nino Rice Risk",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "YlOrRd",
+    description: "Probability or likelihood of dry-spell conditions extracted from the PAGASA Power BI report."
+  },
+  pagasa_powerbi_heat_stress_days: {
+    label: "PAGASA Power BI Heat Stress Days",
+    category: "El Nino Rice Risk",
+    type: "numeric",
+    unit: "days",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "OrRd",
+    description: "Count of heat-stress days or equivalent high-temperature advisory signal extracted from the PAGASA Power BI report."
+  },
+  pagasa_powerbi_agri_risk_score: {
+    label: "PAGASA Power BI Agri Risk Score",
+    category: "El Nino Rice Risk",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "prism_standing_crop_area",
+    colorScheme: "Reds",
+    description: "Composite agricultural climate risk signal derived from PAGASA Power BI rainfall deficit, dry-spell probability, drought class, and heat stress."
+  },
   elnino_prism_standing_exposed_area: {
     label: "El Nino Exposed Standing Rice",
     category: "El Nino Rice Risk",
@@ -1856,6 +2045,7 @@ const COLOR_SCHEMES = {
   Greens:   ["#edf8e9","#c7e9c0","#a1d99b","#74c476","#41ab5d","#238b45","#005a32"],
   Oranges:  ["#feedde","#fdd0a2","#fdae6b","#fd8d3c","#f16913","#d94801","#7f2704"],
   Purples:  ["#f2f0f7","#dadaeb","#bcbddc","#9e9ac8","#807dba","#6a51a3","#4a1486"],
+  Greys:    ["#f7f7f7","#e5e5e5","#cccccc","#969696","#737373","#525252","#252525"],
   PuBu:     ["#fff7fb","#ece7f2","#d0d1e6","#a6bddb","#74a9cf","#3690c0","#0570b0"],
   YlGn:     ["#ffffcc","#d9f0a3","#addd8e","#78c679","#41ab5d","#238443","#005a32"],
   YlOrBr:   ["#ffffe5","#fff7bc","#fee391","#fec44f","#fe9929","#ec7014","#8c2d04"],
@@ -1992,6 +2182,17 @@ const PRIORITY_MODELS = {
       poor_corn_farmers: 0.05
     }
   },
+  asf_biosecurity: {
+    label: "ASF Biosecurity Response Priority",
+    weights: {
+      asf_risk_score: 0.40,
+      asf_positive_total: 0.20,
+      asf_positive_rate_pct: 0.15,
+      asf_affected_barangays: 0.10,
+      abemis_swine_housing_count: 0.08,
+      poverty_2023: 0.07
+    }
+  },
   soil_rehab: {
     label: "Soil Fertility Rehabilitation Priority",
     weights: {
@@ -2083,23 +2284,40 @@ const PRIORITY_MODELS = {
   elnino: {
     label: "El Nino Rice Exposure Priority",
     weights: {
-      elnino_rice_risk_score: 0.35,
-      elnino_prism_standing_exposed_area: 0.25,
-      pagasa_drought_score: 0.15,
+      elnino_rice_risk_score: 0.30,
+      elnino_prism_standing_exposed_area: 0.22,
+      pagasa_drought_score: 0.12,
+      pagasa_powerbi_agri_risk_score: 0.10,
+      pagasa_powerbi_rainfall_deficit_score: 0.08,
       elnino_irrigation_gap_pct: 0.10,
-      poverty_2023: 0.075,
-      poor_rice_farmers: 0.075
+      poverty_2023: 0.04,
+      poor_rice_farmers: 0.04
+    }
+  },
+  pagasa_validation: {
+    label: "PAGASA Advisory Exposure Validation",
+    weights: {
+      pagasa_powerbi_agri_risk_score: 0.24,
+      pagasa_powerbi_rainfall_deficit_score: 0.16,
+      pagasa_powerbi_dry_spell_probability_pct: 0.14,
+      pagasa_drought_score: 0.12,
+      prism_standing_crop_area: 0.14,
+      elnino_irrigation_gap_pct: 0.08,
+      poor_rice_farmers: 0.06,
+      plans_2027_need_gap_score: 0.06
     }
   },
   elnino_resilience: {
     label: "El Nino Resilience Package Priority",
     weights: {
-      elnino_resilience_priority_score: 0.30,
-      elnino_resilience_climate_exposure_score: 0.20,
+      elnino_resilience_priority_score: 0.28,
+      elnino_resilience_climate_exposure_score: 0.19,
+      pagasa_powerbi_agri_risk_score: 0.08,
       elnino_resilience_farmer_vulnerability_score: 0.18,
       elnino_resilience_production_sensitivity_score: 0.16,
       elnino_resilience_implementation_gap_score: 0.10,
-      elnino_resilience_response_capacity_gap_score: 0.06
+      elnino_resilience_response_capacity_gap_score: 0.06,
+      pagasa_powerbi_dry_spell_probability_pct: 0.03
     }
   },
   projects: {
@@ -2284,8 +2502,13 @@ const PLANNING_INSIGHTS = [
   },
   {
     condition: (d) => d.asf_status === "Affected",
-    insight: "This area may require livestock biosecurity coordination due to ASF.",
+    insight: "Sanitized ASF laboratory aggregates show positive results here. Coordinate livestock biosecurity validation without exposing farmer identities.",
     icon: "🐖", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.asf_risk_score) >= 60,
+    insight: "High ASF laboratory risk score. Prioritize veterinary validation, movement-control review, disinfection support, and restocking safeguards.",
+    icon: "ASF", level: "high"
   },
   {
     condition: (d) => parseFloat(d.stunting) > 30 || parseFloat(d.underweight) > 20,

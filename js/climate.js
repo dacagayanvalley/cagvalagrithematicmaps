@@ -13,6 +13,9 @@ const ClimatePanel = (() => {
   const OM_FORECAST = "https://api.open-meteo.com/v1/forecast";
   const OM_CLIMATE  = "https://climate-api.open-meteo.com/v1/climate";
   const PAGASA_BASE = "https://tenday.pagasa.dost.gov.ph/api/v1";
+  const PAGASA_POWERBI_URL = "https://app.powerbi.com/view?r=eyJrIjoiOTJkN2U4MjUtYWE1Ny00NzA4LWExMzctMDBiYjQ2NjZiZWVjIiwidCI6ImJkMDNhNzM1LTJhYTMtNGNjYS05NzIyLTJhZTQ5MjlhYjNlYyIsImMiOjEwfQ%3D%3D&pageName=adfba30c52355c5b1631";
+  const PAGASA_STATION_NORMALS_CSV = "data/pagasa_station_monthly_1991_2020.csv";
+  const PAGASA_STATIONS = ["Aparri", "Tuguegarao", "Casiguran", "Calayan", "Basco", "Itbayat"];
 
   // ── PAGASA public page links ────────────────────────────────
   const LINKS = {
@@ -42,6 +45,7 @@ const ClimatePanel = (() => {
   // ── Module state ────────────────────────────────────────────
   let lat = null, lng = null, locName = "";
   let pagasaToken = "";
+  let stationNormalsRows = null;
   let fChart = null, cChart = null;
   let built = false;
   let panelOpen = false;
@@ -95,6 +99,7 @@ const ClimatePanel = (() => {
       <button class="cp-tab" data-tab="forecast">📅 7-Day</button>
       <button class="cp-tab" data-tab="normals">📊 Normals</button>
       <button class="cp-tab" data-tab="pagasa">🇵🇭 PAGASA</button>
+      <button class="cp-tab" data-tab="powerbi">Power BI</button>
     </div>
 
     <!-- TAB: Now ──────────────────────────────── -->
@@ -221,6 +226,29 @@ const ClimatePanel = (() => {
           <span>🌡️</span><div><b>DA-AMIA CRVA Maps</b><br>Climate risk vulnerability assessment</div>
         </a>
       </div>
+    </div>
+
+    <!-- TAB: PAGASA Power BI report -->
+    <div class="cp-tab-pane" id="cp-pane-powerbi">
+      <div class="cp-section-head">PAGASA Power BI Advisory Reference</div>
+      <p class="cp-small-text">
+        Use this embedded public PAGASA report as the official advisory reference, then compare it with the app's municipal overlays and scenario scores.
+      </p>
+      <div class="cp-powerbi-actions">
+        <a class="cp-primary-link" href="${PAGASA_POWERBI_URL}" target="_blank" rel="noopener">Open full report</a>
+      </div>
+      <div id="cp-pagasa-normals-card" class="cp-station-normals-card">
+        <div class="cp-small-text">Select Aparri, Tuguegarao, Casiguran, Calayan, Basco, or Itbayat to view extracted 1991-2020 station rainfall normals.</div>
+      </div>
+      <div class="cp-powerbi-frame-wrap">
+        <iframe
+          title="PAGASA Power BI climate advisory report"
+          src="${PAGASA_POWERBI_URL}"
+          loading="lazy"
+          allowfullscreen="true">
+        </iframe>
+      </div>
+      <div class="cp-credit">Source: PAGASA public Power BI report. Validate advisory dates before operational use.</div>
     </div>`;
   }
 
@@ -244,6 +272,7 @@ const ClimatePanel = (() => {
 
         // Lazy-load on tab open
         if (tab.dataset.tab === "forecast" && lat !== null) loadForecast();
+        if (tab.dataset.tab === "powerbi") renderPagasaStationNormals();
       });
     });
 
@@ -341,6 +370,7 @@ const ClimatePanel = (() => {
 
     // Reset states and auto-load "Now" tab
     resetToIdle();
+    renderPagasaStationNormals();
     loadNow();
   }
 
@@ -600,6 +630,115 @@ const ClimatePanel = (() => {
       result.innerHTML = `<div class="cp-err-msg">⚠️ PAGASA API: ${e.message}<br>
         <a href="${LINKS.tenday}" target="_blank">View forecast page →</a></div>`;
     }
+  }
+
+  function matchPagasaStation() {
+    const normalized = (locName || "").toLowerCase();
+    return PAGASA_STATIONS.find(station => normalized.includes(station.toLowerCase())) || "";
+  }
+
+  function loadStationNormals() {
+    if (stationNormalsRows) return Promise.resolve(stationNormalsRows);
+    if (typeof Papa === "undefined") return Promise.resolve([]);
+
+    const version = (typeof APP_CONFIG !== "undefined" && APP_CONFIG.assetVersion) || "dev";
+    return new Promise(resolve => {
+      Papa.parse(`${PAGASA_STATION_NORMALS_CSV}?v=${encodeURIComponent(version)}`, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: result => {
+          stationNormalsRows = Array.isArray(result.data) ? result.data : [];
+          resolve(stationNormalsRows);
+        },
+        error: () => resolve([])
+      });
+    });
+  }
+
+  function average(values) {
+    const nums = values.map(Number).filter(v => Number.isFinite(v));
+    if (!nums.length) return null;
+    return nums.reduce((sum, val) => sum + val, 0) / nums.length;
+  }
+
+  function mm(value, digits = 1) {
+    return Number.isFinite(value) ? `${value.toFixed(digits)} mm` : "N/A";
+  }
+
+  async function renderPagasaStationNormals() {
+    const card = $("cp-pagasa-normals-card");
+    if (!card) return;
+
+    const station = matchPagasaStation();
+    if (!station) {
+      card.innerHTML = `<div class="cp-small-text">No extracted PAGASA normal is matched to <b>${locName || "this location"}</b>. Available station normals: ${PAGASA_STATIONS.join(", ")}.</div>`;
+      return;
+    }
+
+    card.innerHTML = `<div class="cp-small-text">Loading ${station} 1991-2020 station rainfall normals...</div>`;
+    const rows = (await loadStationNormals()).filter(row => (row.station || "").toLowerCase() === station.toLowerCase());
+    if (!rows.length) {
+      card.innerHTML = `<div class="cp-small-text">No extracted 1991-2020 rainfall rows were found for <b>${station}</b>.</div>`;
+      return;
+    }
+
+    const years = [...new Set(rows.map(row => Number(row.year)).filter(Number.isFinite))].sort((a, b) => a - b);
+    const completeYears = new Set();
+    years.forEach(year => {
+      const monthCount = new Set(rows.filter(row => Number(row.year) === year).map(row => Number(row.month_number))).size;
+      if (monthCount === 12) completeYears.add(year);
+    });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthAverages = monthNames.map((label, index) => {
+      const rainfall = average(rows.filter(row => Number(row.month_number) === index + 1).map(row => row.rainfall_mm));
+      return { label, rainfall };
+    });
+
+    const seasonTotals = {};
+    rows.forEach(row => {
+      const season = row.philippine_season || "Unclassified";
+      const year = Number(row.year);
+      const rainfall = Number(row.rainfall_mm);
+      if (!Number.isFinite(year) || !Number.isFinite(rainfall)) return;
+      const key = `${season}|${year}`;
+      seasonTotals[key] = (seasonTotals[key] || 0) + rainfall;
+    });
+    const seasonAverages = ["Dry Season", "Wet Season"].map(season => {
+      const totals = Object.entries(seasonTotals)
+        .filter(([key]) => key.startsWith(`${season}|`))
+        .map(([, total]) => total);
+      return { label: season.replace(" Season", ""), rainfall: average(totals) };
+    });
+
+    const annualValues = years.map(year => {
+      const annual = average(rows.filter(row => Number(row.year) === year).map(row => row.annual_rainfall_mm));
+      if (annual != null) return annual;
+      return rows.filter(row => Number(row.year) === year)
+        .map(row => Number(row.rainfall_mm))
+        .filter(Number.isFinite)
+        .reduce((sum, val) => sum + val, 0);
+    }).filter(Number.isFinite);
+    const annualAverage = average(annualValues);
+
+    card.innerHTML = `
+      <div class="cp-normal-title">${station} station rainfall normals</div>
+      <div class="cp-normal-summary">
+        1991-2020 extraction from PAGASA Power BI: ${rows.length} monthly rows, ${years[0]}-${years[years.length - 1]}, ${completeYears.size} complete years.
+      </div>
+      <div class="cp-normal-grid">
+        <div>
+          <div class="cp-normal-subtitle">Monthly mean</div>
+          ${monthAverages.map(item => `<div class="cp-normal-row"><span>${item.label}</span><b>${mm(item.rainfall)}</b></div>`).join("")}
+        </div>
+        <div>
+          <div class="cp-normal-subtitle">Seasonal / annual</div>
+          ${seasonAverages.map(item => `<div class="cp-normal-row"><span>${item.label}</span><b>${mm(item.rainfall, 0)}</b></div>`).join("")}
+          <div class="cp-normal-row"><span>Annual mean</span><b>${mm(annualAverage, 0)}</b></div>
+          <div class="cp-normal-note">Dry: Nov-Apr. Wet: May-Oct. Use advisory anomalies from the embedded report for current El Nino scoring.</div>
+        </div>
+      </div>`;
   }
 
   // ── Called by visualizations.js on every polygon click ──────
