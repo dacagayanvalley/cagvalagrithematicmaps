@@ -79,6 +79,8 @@ Primary attribute data lives in:
 - `data/pagasa_powerbi_climate_extract.csv`
 - `data/drrmis_elnino_province_summary.csv`
 - `data/drrmis_elnino_province_year.csv`
+- `data/bswm_fertmap_municipal_summary.csv`
+- `data/bswm_fertmap_soil_samples.csv`
 - `data/asf_municipal_summary.csv`
 - `data/asf_barangay_summary.csv`
 
@@ -90,6 +92,12 @@ Municipal CSV rows are joined to GeoJSON features using PSGC codes first, then n
 
 ```bash
 python scripts/extract_drrmis_elnino.py
+```
+
+`bswm_fertmap_municipal_summary.csv` and `bswm_fertmap_soil_samples.csv` are public DA-BSWM FertMap point/lab-sample extracts summarized to municipality for fertilizer advisory screening. These are separate from the existing `soil_*` indicators, which are attributed to the DA-RFO2 Integrated Soils Laboratory. Refresh the BSWM extract with:
+
+```bash
+python scripts/fetch_bswm_fertmap.py
 ```
 
 `asf_municipal_summary.csv` and `asf_barangay_summary.csv` are sanitized ASF laboratory-result aggregates from the shared Google Sheet. Farmer names, extension names, and farm/slaughterhouse/agency identifiers are intentionally excluded. Refresh them with:

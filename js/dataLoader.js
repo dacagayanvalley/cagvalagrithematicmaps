@@ -18,6 +18,8 @@ const DataLoader = (() => {
   let asfBarangayData = [];
   let plansProjectsData = [];
   let soilFertilityData = [];
+  let bswmFertMapData = [];
+  let bswmFertMapSamplesData = [];
   let fmrProjectsData = [];
   let fmrSummaryData = [];
   let f2c2ClustersData = [];
@@ -226,6 +228,24 @@ const DataLoader = (() => {
     }
 
     try {
+      bswmFertMapData = await fetchCSV(dataPath + "bswm_fertmap_municipal_summary.csv");
+      mergeBswmFertMapData(bswmFertMapData);
+      console.info(`Loaded bswm_fertmap_municipal_summary.csv: ${bswmFertMapData.length} records`);
+    } catch (e) {
+      console.warn("bswm_fertmap_municipal_summary.csv not found. BSWM FertMap advisory indicators will use defaults.", e);
+      bswmFertMapData = [];
+      addBswmFertMapDefaults();
+    }
+
+    try {
+      bswmFertMapSamplesData = await fetchCSV(dataPath + "bswm_fertmap_soil_samples.csv");
+      console.info(`Loaded bswm_fertmap_soil_samples.csv: ${bswmFertMapSamplesData.length} sample points`);
+    } catch (e) {
+      console.warn("bswm_fertmap_soil_samples.csv not found. BSWM FertMap point layer will be unavailable.", e);
+      bswmFertMapSamplesData = [];
+    }
+
+    try {
       fmrSummaryData = await fetchCSV(dataPath + "fmr_municipal_summary.csv");
       mergeFmrSummaryData(fmrSummaryData);
       console.info(`Loaded fmr_municipal_summary.csv: ${fmrSummaryData.length} records`);
@@ -336,6 +356,8 @@ const DataLoader = (() => {
       drrmisElNinoYearData,
       plansProjectsData,
       soilFertilityData,
+      bswmFertMapData,
+      bswmFertMapSamplesData,
       fmrProjectsData,
       fmrSummaryData,
       f2c2ClustersData,
@@ -754,6 +776,25 @@ const DataLoader = (() => {
     addSoilFertilityDefaults();
   }
 
+  function mergeBswmFertMapData(rows) {
+    rows.forEach(bswmRow => {
+      const row = findMunicipalDataRow(bswmRow.province, bswmRow.municipality);
+      if (!row) {
+        joinMismatches.push({
+          type: "bswm_fertmap_no_csv",
+          name: `${bswmRow.municipality}, ${bswmRow.province}`,
+          message: "BSWM FertMap row has no matching municipal_data.csv row"
+        });
+        return;
+      }
+
+      Object.assign(row, bswmRow);
+    });
+
+    addBswmFertMapDefaults();
+  }
+
+
   function mergeFmrSummaryData(rows) {
     rows.forEach(fmrRow => {
       const row = findMunicipalDataRow(fmrRow.province, fmrRow.municipality);
@@ -1003,6 +1044,38 @@ const DataLoader = (() => {
       row.rsba_corn_avg_farm_size_ha = computeRsbaAverageArea(row.rsba_corn_area_ha, row.rsba_corn_count);
     });
   }
+
+  function addBswmFertMapDefaults() {
+    const numericFields = [
+      "bswm_sample_count",
+      "bswm_coordinate_count",
+      "bswm_complete_test_result_count",
+      "bswm_avg_ph",
+      "bswm_min_ph",
+      "bswm_max_ph",
+      "bswm_acidic_sample_count",
+      "bswm_acidic_sample_pct",
+      "bswm_low_om_count",
+      "bswm_low_om_pct",
+      "bswm_low_p_count",
+      "bswm_low_p_pct",
+      "bswm_low_k_count",
+      "bswm_low_k_pct",
+      "bswm_multiple_low_npk_count",
+      "bswm_multiple_low_npk_pct",
+      "bswm_fertilizer_constraint_score",
+      "bswm_coverage_confidence_score"
+    ];
+
+    Object.values(municipalData).forEach(row => {
+      numericFields.forEach(field => {
+        if (row[field] === undefined || row[field] === null || row[field] === "") row[field] = "0";
+      });
+      if (!row.bswm_has_fertmap_coverage) row.bswm_has_fertmap_coverage = "No";
+      if (row.bswm_latest_release_date === undefined || row.bswm_latest_release_date === null) row.bswm_latest_release_date = "";
+    });
+  }
+
 
   function addPagasaPowerBiDefaults() {
     const numericFields = [
@@ -1347,6 +1420,8 @@ const DataLoader = (() => {
       const soilAcidic = Utils.parseNumeric(row.soil_acidic_pct) || 0;
       const soilNpk = Utils.parseNumeric(row.soil_npk_multiple_low_pct) || 0;
       const soilZinc = Utils.parseNumeric(row.soil_zinc_deficient_pct) || 0;
+      const bswmFertConstraint = Utils.parseNumeric(row.bswm_fertilizer_constraint_score) || 0;
+      const bswmCoverageConfidence = Utils.parseNumeric(row.bswm_coverage_confidence_score) || 0;
       const irrigationGap = Utils.parseNumeric(row.elnino_irrigation_gap_pct) || 0;
       const riceArea = Utils.parseNumeric(row.rice_area_2025) || Utils.parseNumeric(row.rice_area_2023) || 0;
       const cornArea = Utils.parseNumeric(row.corn_area_2025) || Utils.parseNumeric(row.corn_area_2023) || 0;
@@ -1387,6 +1462,7 @@ const DataLoader = (() => {
         Math.min(1, soilAcidic / 60) * 16 +
         Math.min(1, soilNpk / 40) * 14 +
         Math.min(1, soilZinc / 40) * 10 +
+        Math.min(1, bswmFertConstraint / 100) * Math.min(1, bswmCoverageConfidence / 60) * 6 +
         Math.min(1, irrigationGap / 100) * 18 +
         Math.min(1, (riceArea + cornArea) / 25000) * 10 +
         Math.min(1, historicalLatestLoss / 1500000000) * 6 +
@@ -1549,6 +1625,8 @@ const DataLoader = (() => {
     get asfBarangayData() { return asfBarangayData; },
     get plansProjectsData() { return plansProjectsData; },
     get soilFertilityData() { return soilFertilityData; },
+    get bswmFertMapData() { return bswmFertMapData; },
+    get bswmFertMapSamplesData() { return bswmFertMapSamplesData; },
     get fmrProjectsData() { return fmrProjectsData; },
     get fmrSummaryData() { return fmrSummaryData; },
     get f2c2ClustersData() { return f2c2ClustersData; },

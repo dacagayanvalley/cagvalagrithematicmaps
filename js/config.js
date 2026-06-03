@@ -12,7 +12,7 @@ const APP_CONFIG = {
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260603-drrmis-elnino",
+  assetVersion: "20260603-bswm-fertmap-layer",
 };
 
 // ============================================================
@@ -671,6 +671,168 @@ const INDICATOR_CONFIG = {
     weightField: "soil_corn_tested_area_ha",
     colorScheme: "Purples",
     description: "Share of corn soil-tested area classified as zinc deficient."
+  },
+  bswm_sample_count: {
+    label: "FertMap Soil Samples",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Greens",
+    description: "Public DA-BSWM FertMap soil-test sample count summarized to municipality."
+  },
+  bswm_coordinate_count: {
+    label: "FertMap Sample Coordinates",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "points",
+    aggregation: "sum",
+    colorScheme: "Blues",
+    description: "Distinct FertMap coordinate count represented in the municipal sample summary."
+  },
+  bswm_complete_test_result_count: {
+    label: "Complete FertMap Test Results",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Greens",
+    description: "FertMap sample rows with pH, organic matter, phosphorus, and potassium classifications available."
+  },
+  bswm_avg_ph: {
+    label: "Average FertMap pH",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "pH",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "Oranges",
+    description: "Average soil pH from public DA-BSWM FertMap samples."
+  },
+  bswm_acidic_sample_count: {
+    label: "Acidic FertMap Samples",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "FertMap samples with pH below 6.5."
+  },
+  bswm_acidic_sample_pct: {
+    label: "Acidic FertMap Sample Share",
+    category: "BSWM FertMap",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "Oranges",
+    description: "Share of FertMap samples with pH below 6.5."
+  },
+  bswm_low_om_count: {
+    label: "Low OM / N Proxy Samples",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "YlOrRd",
+    description: "FertMap samples rated low in organic matter, used as the public N-related proxy shown by FertMap."
+  },
+  bswm_low_om_pct: {
+    label: "Low OM / N Proxy Share",
+    category: "BSWM FertMap",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "YlOrRd",
+    description: "Share of FertMap samples rated low in organic matter, used as the public N-related proxy shown by FertMap."
+  },
+  bswm_low_p_count: {
+    label: "Low Phosphorus Samples",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "YlOrRd",
+    description: "FertMap samples rated low in phosphorus."
+  },
+  bswm_low_p_pct: {
+    label: "Low Phosphorus Sample Share",
+    category: "BSWM FertMap",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "YlOrRd",
+    description: "Share of FertMap samples rated low in phosphorus."
+  },
+  bswm_low_k_count: {
+    label: "Low Potassium Samples",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "YlOrRd",
+    description: "FertMap samples rated low in potassium."
+  },
+  bswm_low_k_pct: {
+    label: "Low Potassium Sample Share",
+    category: "BSWM FertMap",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "YlOrRd",
+    description: "Share of FertMap samples rated low in potassium."
+  },
+  bswm_multiple_low_npk_count: {
+    label: "Multiple Low FertMap Nutrients",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "samples",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "FertMap samples where at least two of organic matter/N proxy, phosphorus, and potassium are low."
+  },
+  bswm_multiple_low_npk_pct: {
+    label: "Multiple Low FertMap Nutrient Share",
+    category: "BSWM FertMap",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "Reds",
+    description: "Share of FertMap samples where at least two of organic matter/N proxy, phosphorus, and potassium are low."
+  },
+  bswm_fertilizer_constraint_score: {
+    label: "FertMap Fertilizer Constraint Score",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "YlOrRd",
+    description: "Composite sample-based score from acidic pH, low organic matter/N proxy, low phosphorus, low potassium, and multiple-low nutrient overlap."
+  },
+  bswm_coverage_confidence_score: {
+    label: "FertMap Coverage Confidence",
+    category: "BSWM FertMap",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "bswm_sample_count",
+    colorScheme: "Blues",
+    description: "Screening confidence based on FertMap sample count and distinct coordinate coverage."
+  },
+  bswm_has_fertmap_coverage: {
+    label: "FertMap Coverage Present",
+    category: "BSWM FertMap",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "Greens",
+    categories: { "Yes": 1, "No": 0 },
+    description: "Whether the municipality has public DA-BSWM FertMap soil-test samples in the current extract."
   },
   irrigated_area: {
     label: "Irrigated Area",
@@ -2174,6 +2336,7 @@ const CATEGORIES = [
   "Pest and Disease",
   "ASF",
   "Soil Fertility",
+  "BSWM FertMap",
   "FMR Inventory",
   "F2C2 Clusters",
   "ABEMIS Database",
@@ -2411,6 +2574,19 @@ const PRIORITY_MODELS = {
       corn_yield_gap: 0.15
     }
   },
+  bswm_fertmap_advisory: {
+    label: "BSWM FertMap Advisory Priority",
+    weights: {
+      bswm_fertilizer_constraint_score: 0.30,
+      bswm_coverage_confidence_score: 0.15,
+      bswm_acidic_sample_pct: 0.15,
+      bswm_multiple_low_npk_pct: 0.15,
+      bswm_low_p_pct: 0.08,
+      bswm_low_k_pct: 0.08,
+      rice_area_2025: 0.05,
+      corn_area_2025: 0.04
+    }
+  },
   prism: {
     label: "PRiSM Rice Season Monitoring",
     weights: {
@@ -2478,7 +2654,8 @@ const PRIORITY_MODELS = {
       drrmis_elnino_historical_impact_score: 0.08,
       pagasa_powerbi_agri_risk_score: 0.08,
       elnino_resilience_farmer_vulnerability_score: 0.17,
-      elnino_resilience_production_sensitivity_score: 0.15,
+      elnino_resilience_production_sensitivity_score: 0.13,
+      bswm_fertilizer_constraint_score: 0.04,
       elnino_resilience_implementation_gap_score: 0.10,
       elnino_resilience_response_capacity_gap_score: 0.06,
       pagasa_powerbi_dry_spell_probability_pct: 0.02
@@ -2862,6 +3039,13 @@ const FACILITY_CATEGORIES = {
       ABEMIS_FOOD_GARDEN: { label: "ABEMIS Food Gardens", icon: "FG", color: "#65a30d" },
       ABEMIS_LIVESTOCK: { label: "ABEMIS Livestock Facilities", icon: "LV", color: "#ea580c" },
       ABEMIS_OTHER: { label: "ABEMIS Other Infrastructure", icon: "ABI", color: "#4f46e5" }
+    }
+  },
+  bswm: {
+    label: "BSWM FertMap",
+    groupColor: "#0f766e",
+    types: {
+      BSWM_FERTMAP: { label: "FertMap Soil Sample Points", icon: "pH", color: "#0f766e" }
     }
   }
   // Add more categories here freely, e.g.:

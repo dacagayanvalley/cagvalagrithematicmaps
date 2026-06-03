@@ -146,6 +146,13 @@ const MapLayers = (() => {
         f.existing_business_enterprise ? `<div class="popup-row"><b>Existing Enterprise:</b> ${f.existing_business_enterprise}</div>` : "",
         f.proposed_business_enterprise ? `<div class="popup-row"><b>Proposed Enterprise:</b> ${f.proposed_business_enterprise}</div>` : "",
         f.year_constructed?`<div class="popup-row"><b>Year:</b> ${f.year_constructed}</div>` : "",
+        f.soil_ph       ? `<div class="popup-row"><b>Soil pH:</b> ${f.soil_ph}${f.soil_ph_class ? ` (${f.soil_ph_class})` : ""}</div>` : "",
+        f.organic_matter_class ? `<div class="popup-row"><b>Organic Matter / N Proxy:</b> ${f.organic_matter_class}</div>` : "",
+        f.phosphorus_class ? `<div class="popup-row"><b>Phosphorus:</b> ${f.phosphorus_class}</div>` : "",
+        f.potassium_class ? `<div class="popup-row"><b>Potassium:</b> ${f.potassium_class}</div>` : "",
+        f.laboratory_code ? `<div class="popup-row"><b>Lab Code:</b> ${f.laboratory_code}</div>` : "",
+        f.batch_code ? `<div class="popup-row"><b>Batch:</b> ${f.batch_code}</div>` : "",
+        f.date_released ? `<div class="popup-row"><b>Date Released:</b> ${f.date_released}</div>` : "",
         f.remarks        ? `<div class="popup-row"><b>Notes:</b> ${f.remarks}</div>` : "",
         isApproximate    ? `<div class="popup-warning">📍 Location approximate (municipality centroid)</div>` : ""
       ].join("");

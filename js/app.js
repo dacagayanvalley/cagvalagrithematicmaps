@@ -167,6 +167,18 @@ const App = (() => {
         "Review drying, storage, and market support alongside soil interventions where corn area is large."
       ]
     },
+    bswm_fertmap_advisory: {
+      label: "Validate BSWM FertMap fertilizer advisory",
+      question: "Where do public FertMap samples show acidic pH, low nutrient ratings, and enough sample coverage to guide advisory validation?",
+      category: "BSWM FertMap",
+      indicator: "bswm_fertilizer_constraint_score",
+      evidence: ["bswm_fertilizer_constraint_score", "bswm_sample_count", "bswm_coordinate_count", "bswm_coverage_confidence_score", "bswm_acidic_sample_pct", "bswm_low_om_pct", "bswm_low_p_pct", "bswm_low_k_pct", "bswm_multiple_low_npk_pct", "rice_area_2025", "corn_area_2025"],
+      actions: [
+        "Use BSWM FertMap as sample-based advisory evidence, separate from the DA-RFO2 Integrated Soils Laboratory area summaries.",
+        "Validate municipalities with high constraint scores and adequate sample coverage before fertilizer formulation, liming, or demonstration targeting.",
+        "Use FertMap lab-code drill-down for specific farm advisory work; use AgriSight municipal summaries for screening and prioritization."
+      ]
+    },
     prism: {
       label: "Monitor PRiSM rice season",
       question: "Where do current-season rice areas still need field monitoring or harvest logistics?",
@@ -270,6 +282,8 @@ const App = (() => {
         "drrmis_elnino_latest_total_value_loss_php",
         "prism_standing_crop_area",
         "soil_fertility_stress_score",
+        "bswm_fertilizer_constraint_score",
+        "bswm_coverage_confidence_score",
         "plans_2027_need_gap_score"
       ],
       actions: [
@@ -481,11 +495,24 @@ const App = (() => {
       }, 80);
     }
 
-    // Load facility point data once on first render
-    if (!facilitiesLoaded && appData.facilitiesData) {
-      MapLayers.loadFacilities(appData.facilitiesData, appData.municipalGeoJSON);
+    // Load point overlay data once on first render
+    if (!facilitiesLoaded && (appData.facilitiesData || appData.bswmFertMapSamplesData)) {
+      MapLayers.loadFacilities(buildPointOverlayRows(), appData.municipalGeoJSON);
       facilitiesLoaded = true;
     }
+  }
+
+  function buildPointOverlayRows() {
+    const facilities = Array.isArray(appData.facilitiesData) ? appData.facilitiesData : [];
+    const bswmSamples = Array.isArray(appData.bswmFertMapSamplesData) ? appData.bswmFertMapSamplesData : [];
+    const bswmMarkers = bswmSamples.map(row => ({
+      ...row,
+      facility_type: "BSWM_FERTMAP",
+      facility_name: `BSWM FertMap Sample${row.barangay ? ` - ${row.barangay}` : ""}`,
+      status: row.soil_ph_class || "Soil sample",
+      remarks: "Public DA-BSWM FertMap point/lab-sample record. Use municipal summary layers for prioritization."
+    }));
+    return facilities.concat(bswmMarkers);
   }
 
   function getFilteredMunicipalRows() {
@@ -841,6 +868,8 @@ const App = (() => {
     const irrigationGap = Utils.parseNumeric(row.elnino_irrigation_gap_pct) || 0;
     const soilStress = Utils.parseNumeric(row.soil_fertility_stress_score) || 0;
     const acidic = Utils.parseNumeric(row.soil_acidic_pct) || 0;
+    const bswmFertConstraint = Utils.parseNumeric(row.bswm_fertilizer_constraint_score) || 0;
+    const bswmCoverageConfidence = Utils.parseNumeric(row.bswm_coverage_confidence_score) || 0;
     const poorRice = Utils.parseNumeric(row.poor_rice_farmers) || 0;
     const poorCorn = Utils.parseNumeric(row.poor_corn_farmers) || 0;
     const historicalImpact = Utils.parseNumeric(row.drrmis_elnino_historical_impact_score) || 0;
@@ -857,6 +886,7 @@ const App = (() => {
     if (poorRice >= 500 || standing > 1000) items.push("Rice seed reserve, crop insurance, and pest surveillance");
     if (poorCorn >= 500) items.push("Corn drought package, drying, storage, and market-access support");
     if (soilStress >= 45 || acidic >= 35 || production >= 45) items.push("Soil test validation, ameliorants, biofertilizer, and nutrient advisory");
+    if (bswmFertConstraint >= 45 && bswmCoverageConfidence >= 25) items.push("BSWM FertMap fertilizer recommendation drill-down and sample validation");
     if (vulnerability >= 45 || malnutrition >= 8) items.push("Nutrition-sensitive and inclusion-screened beneficiary targeting");
     if (!items.length) items.push("Watchlist monitoring and local validation");
     return items.slice(0, 6);
@@ -1177,7 +1207,8 @@ const App = (() => {
     if (field.startsWith("prism_")) return "Refresh from the latest PRiSM season output before operational rice monitoring or disaster-response use.";
     if (field.startsWith("pagasa_powerbi_")) return "Refresh data/pagasa_powerbi_climate_extract.csv from the latest PAGASA Power BI report before operational climate validation.";
     if (field.startsWith("drrmis_")) return "Province-level DA-DRRMO DRRMIS historical El Nino damage/loss context. Refresh data/drrmis_elnino_province_summary.csv from the public workbook when the dashboard source changes.";
-    if (field.startsWith("soil_")) return "Add updated soil-test records when new laboratory results, crop-specific ratings, or barangay coverage become available.";
+    if (field.startsWith("bswm_")) return "Public DA-BSWM FertMap point/lab-sample data summarized to municipality for screening. Use with coverage confidence and refresh data/bswm_fertmap_municipal_summary.csv from the FertMap API when sample records change.";
+    if (field.startsWith("soil_")) return "DA-RFO2 Integrated Soils Laboratory soil analysis summary. Add updated soil-test records when new laboratory results, crop-specific ratings, or barangay coverage become available.";
     if (field.startsWith("fmr_")) return "Refresh FMR inventory records when project status, length, beneficiaries, or influence area changes.";
     if (field.startsWith("f2c2_")) return "Refresh F2C2/FCA cluster records when membership, area, commodities, or enterprise monitoring updates are available.";
     if (field.startsWith("plans_")) return "Refresh plans and projects extraction when PIP, GAA, or planning workbooks change.";

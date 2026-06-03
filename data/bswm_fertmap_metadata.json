@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-06-03T02:51:33Z",
+  "source_app_url": "https://nsid.bswm.da.gov.ph:5173/",
+  "source_api_url": "https://nsid.bswm.da.gov.ph:8000/api/msl-rst/nsidData",
+  "source_payload": "C:\\tmp\\bswm_all_sample.json",
+  "notes": [
+    "Public DA-BSWM FertMap point/lab-sample data summarized to municipality for AgriSight screening.",
+    "Existing soil_* indicators remain attributed to DA-RFO2 Integrated Soils Laboratory.",
+    "bswm_low_om fields use FertMap organic matter classification as the public N-related proxy displayed by the FertMap interface.",
+    "Batanes is retained as Region 02 context but had no public FertMap rows in the source payload at generation time."
+  ],
+  "raw_rows_total": 5655,
+  "region_02_sample_rows": 1701,
+  "municipal_summary_rows": 54,
+  "coverage_by_province": {
+    "Cagayan": {
+      "samples": 718,
+      "municipalities": 24
+    },
+    "Isabela": {
+      "samples": 332,
+      "municipalities": 17
+    },
+    "Nueva Vizcaya": {
+      "samples": 475,
+      "municipalities": 9
+    },
+    "Quirino": {
+      "samples": 176,
+      "municipalities": 4
+    }
+  },
+  "outputs": [
+    "data/bswm_fertmap_soil_samples.csv",
+    "data/bswm_fertmap_municipal_summary.csv"
+  ]
+}
