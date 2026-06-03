@@ -1,0 +1,29 @@
+{
+  "source": "DA National Disaster Risk Reduction and Management Office DRRMIS dashboard",
+  "dashboard_url": "https://datastudio.google.com/reporting/5adf7ccf-22ae-45aa-a423-2ed6c8bbfecc/page/uW9wF",
+  "raw_data_link": "https://bit.ly/DADRRMSELNINODATA",
+  "source_url": "https://docs.google.com/spreadsheets/d/1KYuowXvOCPYeNQMTayd88RWJ4HrxsjFT78Kjz0GlYlo/edit?usp=sharing",
+  "source_sheet_id": "1KYuowXvOCPYeNQMTayd88RWJ4HrxsjFT78Kjz0GlYlo",
+  "source_file": "C:\\tmp\\drrmis_elnino_historical.xlsx",
+  "fetched_at_utc": "2026-06-03T01:49:34+00:00",
+  "workbook_sheets": [
+    "Note",
+    "Dashboard Link",
+    "El Nino_raw data",
+    "Data",
+    "Summary",
+    "Regional_Summary",
+    "Provincial_Summary",
+    "El Nino_Summary_Year_Province",
+    "Occurence"
+  ],
+  "province_year_rows": 37,
+  "province_summary_rows": 5,
+  "mismatch_rows": 1,
+  "notes": [
+    "Notes tab says province reporting can be incomplete in earlier reports, especially infrastructure reports.",
+    "Notes tab says animal pests and diseases such as ASF and AI are excluded.",
+    "Notes tab says farmer/fisherfolk affected counts are available from 2019 to present.",
+    "Values are province-level historical context, not municipal raw observations."
+  ]
+}

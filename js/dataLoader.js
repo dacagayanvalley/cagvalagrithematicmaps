@@ -12,6 +12,8 @@ const DataLoader = (() => {
   let prismData = [];
   let droughtOutlookData = [];
   let pagasaPowerBiData = [];
+  let drrmisElNinoSummaryData = [];
+  let drrmisElNinoYearData = [];
   let asfSummaryData = [];
   let asfBarangayData = [];
   let plansProjectsData = [];
@@ -166,6 +168,24 @@ const DataLoader = (() => {
     }
 
     try {
+      drrmisElNinoSummaryData = await fetchCSV(dataPath + "drrmis_elnino_province_summary.csv");
+      mergeDrrmisElNinoSummaryData(drrmisElNinoSummaryData);
+      console.info(`Loaded drrmis_elnino_province_summary.csv: ${drrmisElNinoSummaryData.length} records`);
+    } catch (e) {
+      console.warn("drrmis_elnino_province_summary.csv not found. Historical El Nino impact indicators will use defaults.", e);
+      drrmisElNinoSummaryData = [];
+      addDrrmisElNinoDefaults();
+    }
+
+    try {
+      drrmisElNinoYearData = await fetchCSV(dataPath + "drrmis_elnino_province_year.csv");
+      console.info(`Loaded drrmis_elnino_province_year.csv: ${drrmisElNinoYearData.length} records`);
+    } catch (e) {
+      console.warn("drrmis_elnino_province_year.csv not found. Historical El Nino detail table will be unavailable.", e);
+      drrmisElNinoYearData = [];
+    }
+
+    try {
       asfSummaryData = await fetchCSV(dataPath + "asf_municipal_summary.csv");
       mergeAsfSummaryData(asfSummaryData);
       console.info(`Loaded asf_municipal_summary.csv: ${asfSummaryData.length} records`);
@@ -312,6 +332,8 @@ const DataLoader = (() => {
       prismData,
       droughtOutlookData,
       pagasaPowerBiData,
+      drrmisElNinoSummaryData,
+      drrmisElNinoYearData,
       plansProjectsData,
       soilFertilityData,
       fmrProjectsData,
@@ -609,6 +631,32 @@ const DataLoader = (() => {
     addPagasaPowerBiDefaults();
   }
 
+  function mergeDrrmisElNinoSummaryData(rows) {
+    const byProvince = {};
+    rows.forEach(row => {
+      const province = Utils.normalizeName(row.province);
+      if (province) byProvince[province] = row;
+    });
+
+    Object.values(municipalData).forEach(row => {
+      const match = byProvince[Utils.normalizeName(row.province)];
+      if (match) assignDrrmisElNinoFields(row, match);
+    });
+
+    Object.keys(byProvince).forEach(provinceKey => {
+      const matched = Object.values(municipalData).some(row => Utils.normalizeName(row.province) === provinceKey);
+      if (!matched) {
+        joinMismatches.push({
+          type: "drrmis_elnino_no_csv",
+          name: byProvince[provinceKey].province || provinceKey,
+          message: "DRRMIS El Nino province summary has no matching municipal_data.csv province"
+        });
+      }
+    });
+
+    addDrrmisElNinoDefaults();
+  }
+
   function mergeAsfSummaryData(rows) {
     rows.forEach(asfRow => {
       const row = findMunicipalDataRow(asfRow.province, asfRow.municipality);
@@ -655,6 +703,12 @@ const DataLoader = (() => {
   function assignAsfFields(target, source) {
     Object.entries(source).forEach(([key, value]) => {
       if (key.startsWith("asf_")) target[key] = value;
+    });
+  }
+
+  function assignDrrmisElNinoFields(target, source) {
+    Object.entries(source).forEach(([key, value]) => {
+      if (key.startsWith("drrmis_")) target[key] = value;
     });
   }
 
@@ -980,6 +1034,46 @@ const DataLoader = (() => {
     });
   }
 
+  function addDrrmisElNinoDefaults() {
+    const numericFields = [
+      "drrmis_elnino_episode_count",
+      "drrmis_elnino_first_year",
+      "drrmis_elnino_latest_year",
+      "drrmis_elnino_total_farmers_affected",
+      "drrmis_elnino_total_area_affected_ha",
+      "drrmis_elnino_total_production_loss_mt",
+      "drrmis_elnino_total_value_loss_php",
+      "drrmis_elnino_rice_area_affected_ha",
+      "drrmis_elnino_rice_value_loss_php",
+      "drrmis_elnino_corn_area_affected_ha",
+      "drrmis_elnino_corn_value_loss_php",
+      "drrmis_elnino_hvcc_area_affected_ha",
+      "drrmis_elnino_hvcc_value_loss_php",
+      "drrmis_elnino_fisheries_value_loss_php",
+      "drrmis_elnino_livestock_value_loss_php",
+      "drrmis_elnino_infra_equipment_value_loss_php",
+      "drrmis_elnino_latest_total_value_loss_php",
+      "drrmis_elnino_latest_area_affected_ha",
+      "drrmis_elnino_latest_farmers_affected",
+      "drrmis_elnino_historical_impact_score"
+    ];
+
+    Object.values(municipalData).forEach(row => {
+      numericFields.forEach(field => {
+        if (row[field] === undefined || row[field] === null || row[field] === "") row[field] = "0";
+      });
+      [
+        "drrmis_region",
+        "drrmis_elnino_source_level",
+        "drrmis_elnino_historical_impact_class",
+        "drrmis_elnino_context_note",
+        "drrmis_elnino_source_url"
+      ].forEach(field => {
+        if (row[field] === undefined || row[field] === null) row[field] = "";
+      });
+    });
+  }
+
   function addAsfDefaults() {
     Object.values(municipalData).forEach(row => addAsfDefaultsToRow(row));
   }
@@ -1229,6 +1323,9 @@ const DataLoader = (() => {
       const rainfallDeficit = Math.max(0, -(Utils.parseNumeric(row.pagasa_powerbi_rainfall_anomaly_pct) || 0));
       const drySpellProbability = Utils.parseNumeric(row.pagasa_powerbi_dry_spell_probability_pct) || 0;
       const heatStressDays = Utils.parseNumeric(row.pagasa_powerbi_heat_stress_days) || 0;
+      const historicalImpact = Utils.parseNumeric(row.drrmis_elnino_historical_impact_score) || 0;
+      const historicalFrequency = Utils.parseNumeric(row.drrmis_elnino_episode_count) || 0;
+      const historicalLatestLoss = Utils.parseNumeric(row.drrmis_elnino_latest_total_value_loss_php) || 0;
       const standing = Utils.parseNumeric(row.prism_standing_crop_area) || 0;
       const reproductive = Utils.parseNumeric(row.prism_growth_reproductive_ha) || 0;
       const ripening = Utils.parseNumeric(row.prism_growth_ripening_ha) || 0;
@@ -1271,6 +1368,8 @@ const DataLoader = (() => {
         Math.min(1, rainfallDeficit / 60) * 8 +
         Math.min(1, drySpellProbability / 100) * 5 +
         Math.min(1, heatStressDays / 10) * 5 +
+        Math.min(1, historicalImpact / 100) * 8 +
+        Math.min(1, historicalFrequency / 8) * 4 +
         Math.min(1, standing / 5000) * 20 +
         Math.min(1, (reproductive + ripening) / 2500) * 15 +
         Math.min(1, hazardDrought) * 10 +
@@ -1290,6 +1389,7 @@ const DataLoader = (() => {
         Math.min(1, soilZinc / 40) * 10 +
         Math.min(1, irrigationGap / 100) * 18 +
         Math.min(1, (riceArea + cornArea) / 25000) * 10 +
+        Math.min(1, historicalLatestLoss / 1500000000) * 6 +
         Math.max(0, Math.min(1, (4.5 - Math.max(riceYield, cornYield)) / 4.5)) * 8;
 
       const assetCoverage =
@@ -1443,6 +1543,8 @@ const DataLoader = (() => {
     get prismData() { return prismData; },
     get droughtOutlookData() { return droughtOutlookData; },
     get pagasaPowerBiData() { return pagasaPowerBiData; },
+    get drrmisElNinoSummaryData() { return drrmisElNinoSummaryData; },
+    get drrmisElNinoYearData() { return drrmisElNinoYearData; },
     get asfSummaryData() { return asfSummaryData; },
     get asfBarangayData() { return asfBarangayData; },
     get plansProjectsData() { return plansProjectsData; },

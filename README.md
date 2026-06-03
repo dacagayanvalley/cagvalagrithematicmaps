@@ -77,12 +77,20 @@ Primary attribute data lives in:
 - `data/municipal_data.csv`
 - `data/facilities.csv`
 - `data/pagasa_powerbi_climate_extract.csv`
+- `data/drrmis_elnino_province_summary.csv`
+- `data/drrmis_elnino_province_year.csv`
 - `data/asf_municipal_summary.csv`
 - `data/asf_barangay_summary.csv`
 
 Municipal CSV rows are joined to GeoJSON features using PSGC codes first, then normalized province and municipality names.
 
 `pagasa_powerbi_climate_extract.csv` is the optional municipal/provincial extraction layer for the embedded PAGASA Power BI report in the Climate Info panel. Replace its placeholder values with the latest PAGASA Power BI rainfall, anomaly, dry-spell, heat-stress, and agri-risk fields before using PAGASA-driven scenario scores operationally.
+
+`drrmis_elnino_province_summary.csv` and `drrmis_elnino_province_year.csv` are province-level historical El Nino drought damage/loss extracts from the DA National Disaster Risk Reduction and Management Office DRRMIS Looker Studio dashboard raw-data workbook. The values are repeated to municipalities only as province context for screening and should not be interpreted as municipal damage totals. Refresh them with:
+
+```bash
+python scripts/extract_drrmis_elnino.py
+```
 
 `asf_municipal_summary.csv` and `asf_barangay_summary.csv` are sanitized ASF laboratory-result aggregates from the shared Google Sheet. Farmer names, extension names, and farm/slaughterhouse/agency identifiers are intentionally excluded. Refresh them with:
 

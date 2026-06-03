@@ -12,7 +12,7 @@ const APP_CONFIG = {
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260602-asf-google-sheet",
+  assetVersion: "20260603-drrmis-elnino",
 };
 
 // ============================================================
@@ -1557,6 +1557,157 @@ const INDICATOR_CONFIG = {
     colorScheme: "Reds",
     description: "Composite agricultural climate risk signal derived from PAGASA Power BI rainfall deficit, dry-spell probability, drought class, and heat stress."
   },
+  drrmis_elnino_historical_impact_score: {
+    label: "DRRMIS Historical El Nino Impact Score",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "max",
+    colorScheme: "Reds",
+    description: "Province-level historical El Nino damage/loss score from DA-DRRMO DRRMIS. Repeated to municipalities for screening context only."
+  },
+  drrmis_elnino_historical_impact_class: {
+    label: "DRRMIS Historical Impact Class",
+    category: "El Nino Historical Impact",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "Reds",
+    categories: {
+      "Very High Historical Impact": 4,
+      "High Historical Impact": 3,
+      "Moderate Historical Impact": 2,
+      "Lower Historical Impact": 1,
+      "No Extracted Historical Impact": 0
+    },
+    description: "Classified province-level historical El Nino impact from DA-DRRMO DRRMIS."
+  },
+  drrmis_elnino_episode_count: {
+    label: "DRRMIS El Nino Episodes",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "episodes",
+    aggregation: "max",
+    colorScheme: "OrRd",
+    description: "Number of historical El Nino episodes with extracted drought damage/loss records for the province."
+  },
+  drrmis_elnino_total_farmers_affected: {
+    label: "DRRMIS Farmers/Fisherfolk Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "persons",
+    aggregation: "max",
+    colorScheme: "Oranges",
+    description: "Province-level historical total farmers/fisherfolk affected by El Nino drought reports."
+  },
+  drrmis_elnino_total_area_affected_ha: {
+    label: "DRRMIS Total Area Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "max",
+    colorScheme: "YlOrRd",
+    description: "Province-level historical total agricultural area affected by El Nino drought reports."
+  },
+  drrmis_elnino_total_production_loss_mt: {
+    label: "DRRMIS Production Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "MT",
+    aggregation: "max",
+    colorScheme: "Purples",
+    description: "Province-level historical total production loss from El Nino drought reports."
+  },
+  drrmis_elnino_total_value_loss_php: {
+    label: "DRRMIS Value Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "max",
+    colorScheme: "Reds",
+    description: "Province-level historical total value loss from El Nino drought reports."
+  },
+  drrmis_elnino_rice_area_affected_ha: {
+    label: "DRRMIS Rice Area Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "max",
+    colorScheme: "YlGn",
+    description: "Province-level historical rice area affected by El Nino drought reports."
+  },
+  drrmis_elnino_rice_value_loss_php: {
+    label: "DRRMIS Rice Value Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "max",
+    colorScheme: "YlGn",
+    description: "Province-level historical rice value loss from El Nino drought reports."
+  },
+  drrmis_elnino_corn_area_affected_ha: {
+    label: "DRRMIS Corn Area Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "max",
+    colorScheme: "YlOrBr",
+    description: "Province-level historical corn area affected by El Nino drought reports."
+  },
+  drrmis_elnino_corn_value_loss_php: {
+    label: "DRRMIS Corn Value Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "max",
+    colorScheme: "YlOrBr",
+    description: "Province-level historical corn value loss from El Nino drought reports."
+  },
+  drrmis_elnino_hvcc_area_affected_ha: {
+    label: "DRRMIS HVCC Area Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "max",
+    colorScheme: "Greens",
+    description: "Province-level historical HVCC area affected by El Nino drought reports."
+  },
+  drrmis_elnino_hvcc_value_loss_php: {
+    label: "DRRMIS HVCC Value Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "max",
+    colorScheme: "Greens",
+    description: "Province-level historical HVCC value loss from El Nino drought reports."
+  },
+  drrmis_elnino_latest_total_value_loss_php: {
+    label: "DRRMIS Latest Episode Value Loss",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "PHP",
+    aggregation: "max",
+    colorScheme: "Reds",
+    description: "Province-level value loss from the latest extracted El Nino drought episode."
+  },
+  drrmis_elnino_latest_area_affected_ha: {
+    label: "DRRMIS Latest Episode Area Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "max",
+    colorScheme: "YlOrRd",
+    description: "Province-level area affected in the latest extracted El Nino drought episode."
+  },
+  drrmis_elnino_latest_farmers_affected: {
+    label: "DRRMIS Latest Farmers/Fisherfolk Affected",
+    category: "El Nino Historical Impact",
+    type: "numeric",
+    unit: "persons",
+    aggregation: "max",
+    colorScheme: "Oranges",
+    description: "Province-level farmers/fisherfolk affected in the latest extracted El Nino drought episode."
+  },
   elnino_prism_standing_exposed_area: {
     label: "El Nino Exposed Standing Rice",
     category: "El Nino Rice Risk",
@@ -2030,6 +2181,7 @@ const CATEGORIES = [
   "PRiSM Rice Monitoring",
   "PRiSM Flood Damage",
   "El Nino Rice Risk",
+  "El Nino Historical Impact",
   "El Nino Resilience",
   "Plans & Projects",
   "Climate Risk Vulnerability",
@@ -2307,17 +2459,29 @@ const PRIORITY_MODELS = {
       plans_2027_need_gap_score: 0.06
     }
   },
+  drrmis_elnino_history: {
+    label: "DRRMIS Historical El Nino Impact",
+    weights: {
+      drrmis_elnino_historical_impact_score: 0.34,
+      drrmis_elnino_episode_count: 0.18,
+      drrmis_elnino_total_value_loss_php: 0.18,
+      drrmis_elnino_total_area_affected_ha: 0.12,
+      drrmis_elnino_total_farmers_affected: 0.10,
+      drrmis_elnino_latest_total_value_loss_php: 0.08
+    }
+  },
   elnino_resilience: {
     label: "El Nino Resilience Package Priority",
     weights: {
-      elnino_resilience_priority_score: 0.28,
-      elnino_resilience_climate_exposure_score: 0.19,
+      elnino_resilience_priority_score: 0.25,
+      elnino_resilience_climate_exposure_score: 0.17,
+      drrmis_elnino_historical_impact_score: 0.08,
       pagasa_powerbi_agri_risk_score: 0.08,
-      elnino_resilience_farmer_vulnerability_score: 0.18,
-      elnino_resilience_production_sensitivity_score: 0.16,
+      elnino_resilience_farmer_vulnerability_score: 0.17,
+      elnino_resilience_production_sensitivity_score: 0.15,
       elnino_resilience_implementation_gap_score: 0.10,
       elnino_resilience_response_capacity_gap_score: 0.06,
-      pagasa_powerbi_dry_spell_probability_pct: 0.03
+      pagasa_powerbi_dry_spell_probability_pct: 0.02
     }
   },
   projects: {

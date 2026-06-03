@@ -227,6 +227,28 @@ const App = (() => {
         "Use the result as a validation screen for field advisories, irrigation scheduling, seed reserve, crop insurance, and 2027 plan gap review."
       ]
     },
+    drrmis_elnino_history: {
+      label: "Review historical El Nino impact",
+      question: "Which provinces have repeated El Nino damage/loss history that should inform preparedness and resilience packages?",
+      category: "El Nino Historical Impact",
+      indicator: "drrmis_elnino_historical_impact_score",
+      evidence: [
+        "drrmis_elnino_historical_impact_score",
+        "drrmis_elnino_historical_impact_class",
+        "drrmis_elnino_episode_count",
+        "drrmis_elnino_total_value_loss_php",
+        "drrmis_elnino_total_area_affected_ha",
+        "drrmis_elnino_total_farmers_affected",
+        "drrmis_elnino_rice_value_loss_php",
+        "drrmis_elnino_corn_value_loss_php",
+        "drrmis_elnino_latest_total_value_loss_php"
+      ],
+      actions: [
+        "Use this as province-level context for preparedness, not as municipal damage totals.",
+        "Compare historical recurrence with current PAGASA, PRiSM, irrigation, poverty, and plan-gap evidence before selecting municipalities.",
+        "Review crop-specific losses to decide whether rice, corn, HVCC, fisheries, livestock, or infrastructure support should anchor the package."
+      ]
+    },
     elnino_resilience: {
       label: "Build El Nino resilience packages",
       question: "Where do climate exposure, vulnerable farmers, production constraints, weak response capacity, and implementation gaps overlap for June 2026 to May 2027 action?",
@@ -243,6 +265,9 @@ const App = (() => {
         "pagasa_powerbi_agri_risk_score",
         "pagasa_powerbi_rainfall_deficit_score",
         "pagasa_powerbi_dry_spell_probability_pct",
+        "drrmis_elnino_historical_impact_score",
+        "drrmis_elnino_episode_count",
+        "drrmis_elnino_latest_total_value_loss_php",
         "prism_standing_crop_area",
         "soil_fertility_stress_score",
         "plans_2027_need_gap_score"
@@ -818,6 +843,8 @@ const App = (() => {
     const acidic = Utils.parseNumeric(row.soil_acidic_pct) || 0;
     const poorRice = Utils.parseNumeric(row.poor_rice_farmers) || 0;
     const poorCorn = Utils.parseNumeric(row.poor_corn_farmers) || 0;
+    const historicalImpact = Utils.parseNumeric(row.drrmis_elnino_historical_impact_score) || 0;
+    const historicalFrequency = Utils.parseNumeric(row.drrmis_elnino_episode_count) || 0;
     const malnutrition = Math.max(
       Utils.parseNumeric(row.stunting) || 0,
       Utils.parseNumeric(row.underweight) || 0,
@@ -825,6 +852,7 @@ const App = (() => {
     );
 
     if (climate >= 45 || standing > 1000) items.push("PRiSM/PAGASA field validation");
+    if (historicalImpact >= 55 || historicalFrequency >= 7) items.push("Historical El Nino recurrence review with DA-DRRMO DRRMIS records");
     if (irrigationGap >= 45) items.push("Irrigation scheduling, SPIS/INS, and water-source checks");
     if (poorRice >= 500 || standing > 1000) items.push("Rice seed reserve, crop insurance, and pest surveillance");
     if (poorCorn >= 500) items.push("Corn drought package, drying, storage, and market-access support");
@@ -1148,6 +1176,7 @@ const App = (() => {
     if (field.startsWith("rsba_")) return "Refresh from the latest RSBSA source if registry counts, crop area, FCA, IMC, or inclusion fields change.";
     if (field.startsWith("prism_")) return "Refresh from the latest PRiSM season output before operational rice monitoring or disaster-response use.";
     if (field.startsWith("pagasa_powerbi_")) return "Refresh data/pagasa_powerbi_climate_extract.csv from the latest PAGASA Power BI report before operational climate validation.";
+    if (field.startsWith("drrmis_")) return "Province-level DA-DRRMO DRRMIS historical El Nino damage/loss context. Refresh data/drrmis_elnino_province_summary.csv from the public workbook when the dashboard source changes.";
     if (field.startsWith("soil_")) return "Add updated soil-test records when new laboratory results, crop-specific ratings, or barangay coverage become available.";
     if (field.startsWith("fmr_")) return "Refresh FMR inventory records when project status, length, beneficiaries, or influence area changes.";
     if (field.startsWith("f2c2_")) return "Refresh F2C2/FCA cluster records when membership, area, commodities, or enterprise monitoring updates are available.";
