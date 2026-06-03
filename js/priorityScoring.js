@@ -15,6 +15,7 @@ const PriorityScoring = (() => {
       // Categorical mappings
       const catMaps = {
         pest_disease_occurrence: { "High": 1.0, "Moderate": 0.66, "Low": 0.33, "None": 0 },
+        rcpc_risk_class: { "Critical": 1.0, "High": 0.75, "Moderate": 0.5, "Watchlist": 0.25, "Data Insufficient": 0 },
         asf_status: { "Affected": 1.0, "At-risk": 0.5, "Clear": 0 },
         soil_fertility: { "Low": 1.0, "Moderate": 0.5, "High": 0 } // inverted: Low = worse
       };
@@ -160,6 +161,15 @@ const PriorityScoring = (() => {
       corn_mechanization_gap: "Corn Mechanization Gap",
       irrigation_gap: "Irrigation Gap",
       pest_disease_score: "Pest & Disease Risk",
+      rcpc_surveillance_priority_score: "RCPC Surveillance Priority",
+      rcpc_pest_pressure_score: "RCPC Pest Pressure",
+      rcpc_response_gap_score: "RCPC Response Gap",
+      rcpc_recent_affected_area_ha: "RCPC Recent Affected Area",
+      rcpc_recent_affected_farmers: "RCPC Recent Affected Farmers",
+      rcpc_high_severity_records: "RCPC High-Severity Records",
+      rcpc_affected_area_ha: "RCPC Affected Area",
+      rcpc_affected_farmers: "RCPC Affected Farmers",
+      rcpc_treatment_gap_ha: "RCPC Treatment Gap",
       asf_score: "ASF Lab Risk",
       asf_risk_score: "ASF Lab Risk",
       asf_positive_total: "ASF Positive Samples",

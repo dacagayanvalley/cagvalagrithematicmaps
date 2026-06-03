@@ -12,7 +12,7 @@ const APP_CONFIG = {
   mapCenter: [17.6132, 121.7270],
   mapZoom: 8,
   dataPath: "data/",
-  assetVersion: "20260603-bswm-fertmap-layer",
+  assetVersion: "20260603-rcpc-pest-disease",
 };
 
 // ============================================================
@@ -273,6 +273,228 @@ const INDICATOR_CONFIG = {
     colorScheme: "Reds",
     categories: { "High": 3, "Moderate": 2, "Low": 1, "None": 0 },
     description: "Level of pest and disease occurrence"
+  },
+  rcpc_surveillance_priority_score: {
+    label: "RCPC Surveillance Priority",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "rcpc_incident_records",
+    colorScheme: "YlOrRd",
+    description: "Municipal crop-protection priority score from RCPC pest and disease records, emphasizing recent affected area, affected farmers, pest diversity, and pressure."
+  },
+  rcpc_pest_pressure_score: {
+    label: "RCPC Pest Pressure Score",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "rcpc_incident_records",
+    colorScheme: "Reds",
+    description: "Composite pest pressure score using affected area, record frequency, infestation, severity, and recent affected area."
+  },
+  rcpc_response_gap_score: {
+    label: "RCPC Response Gap Score",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "/100",
+    aggregation: "weighted_average",
+    weightField: "rcpc_affected_area_ha",
+    colorScheme: "OrRd",
+    description: "Screening score for untreated area and recent treatment gaps in RCPC crop-protection records."
+  },
+  rcpc_risk_class: {
+    label: "RCPC Risk Class",
+    category: "Pest and Disease",
+    type: "categorical",
+    unit: "",
+    aggregation: "dominant",
+    colorScheme: "Reds",
+    categories: { "Critical": 4, "High": 3, "Moderate": 2, "Watchlist": 1, "Data Insufficient": 0 },
+    description: "Highest municipal RCPC screening class from pest pressure, surveillance priority, and response gap scores."
+  },
+  rcpc_incident_records: {
+    label: "RCPC Incident Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Number of nonblank RCPC pest and disease incidence records for the municipality."
+  },
+  rcpc_incident_points: {
+    label: "RCPC Geocoded Incident Points",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "points",
+    aggregation: "sum",
+    colorScheme: "PuBu",
+    description: "Number of RCPC incidence records with valid Region 02 coordinates available for point-layer inspection."
+  },
+  rcpc_affected_area_ha: {
+    label: "RCPC Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Total crop area affected across RCPC pest and disease records."
+  },
+  rcpc_recent_affected_area_ha: {
+    label: "RCPC Recent Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "YlOrRd",
+    description: "Affected area in records from the latest available year and the preceding year for each municipality."
+  },
+  rcpc_affected_farmers: {
+    label: "RCPC Affected Farmers",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "farmers",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "Affected farmers reported in RCPC pest and disease incidence records."
+  },
+  rcpc_recent_affected_farmers: {
+    label: "RCPC Recent Affected Farmers",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "farmers",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "Affected farmers from the latest available year and preceding year for each municipality."
+  },
+  rcpc_avg_infestation_pct: {
+    label: "RCPC Avg Infestation",
+    category: "Pest and Disease",
+    type: "percentage",
+    unit: "%",
+    aggregation: "weighted_average",
+    weightField: "rcpc_incident_records",
+    colorScheme: "YlOrRd",
+    description: "Average percent infestation from RCPC records with usable infestation values."
+  },
+  rcpc_max_infestation_pct: {
+    label: "RCPC Max Infestation",
+    category: "Pest and Disease",
+    type: "percentage",
+    unit: "%",
+    aggregation: "max",
+    colorScheme: "Reds",
+    description: "Highest percent infestation observed in RCPC records for the municipality."
+  },
+  rcpc_avg_severity: {
+    label: "RCPC Avg Severity",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "",
+    aggregation: "weighted_average",
+    weightField: "rcpc_incident_records",
+    colorScheme: "OrRd",
+    description: "Average source severity score where severity values are available."
+  },
+  rcpc_high_severity_records: {
+    label: "RCPC High-Severity Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Records with high severity or high infestation values, useful for validation and crop-protection triage."
+  },
+  rcpc_treatment_gap_ha: {
+    label: "RCPC Treatment Gap",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "OrRd",
+    description: "Reported untreated affected area, including derived affected-minus-treated gaps where source fields permit."
+  },
+  rcpc_recent_treatment_gap_ha: {
+    label: "RCPC Recent Treatment Gap",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "OrRd",
+    description: "Recent untreated affected area from the latest available year and preceding year."
+  },
+  rcpc_rice_affected_area_ha: {
+    label: "RCPC Rice Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "Affected rice area in RCPC incidence records."
+  },
+  rcpc_corn_affected_area_ha: {
+    label: "RCPC Corn Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "YlOrBr",
+    description: "Affected corn area in RCPC incidence records."
+  },
+  rcpc_hvc_affected_area_ha: {
+    label: "RCPC HVC Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "Purples",
+    description: "Affected high-value crop area in RCPC incidence records."
+  },
+  rcpc_cassava_affected_area_ha: {
+    label: "RCPC Cassava Affected Area",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "ha",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "Affected cassava area in RCPC incidence records."
+  },
+  rcpc_rice_records: {
+    label: "RCPC Rice Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Reds",
+    description: "RCPC rice pest and disease record count."
+  },
+  rcpc_corn_records: {
+    label: "RCPC Corn Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "YlOrBr",
+    description: "RCPC corn pest and disease record count."
+  },
+  rcpc_hvc_records: {
+    label: "RCPC HVC Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Purples",
+    description: "RCPC high-value crop pest and disease record count."
+  },
+  rcpc_cassava_records: {
+    label: "RCPC Cassava Records",
+    category: "Pest and Disease",
+    type: "numeric",
+    unit: "records",
+    aggregation: "sum",
+    colorScheme: "Oranges",
+    description: "RCPC cassava pest and disease record count."
   },
   asf_status: {
     label: "ASF Status",
@@ -2497,6 +2719,19 @@ const PRIORITY_MODELS = {
       poor_corn_farmers: 0.05
     }
   },
+  rcpc_crop_protection: {
+    label: "RCPC Crop Protection Priority",
+    weights: {
+      rcpc_surveillance_priority_score: 0.25,
+      rcpc_pest_pressure_score: 0.20,
+      rcpc_response_gap_score: 0.15,
+      rcpc_recent_affected_area_ha: 0.12,
+      rcpc_recent_affected_farmers: 0.10,
+      rcpc_high_severity_records: 0.08,
+      poverty_2023: 0.05,
+      plans_2027_need_gap_score: 0.05
+    }
+  },
   asf_biosecurity: {
     label: "ASF Biosecurity Response Priority",
     weights: {
@@ -2842,6 +3077,26 @@ const PLANNING_INSIGHTS = [
     icon: "🦠", level: "high"
   },
   {
+    condition: (d) => parseFloat(d.rcpc_surveillance_priority_score) >= 60,
+    insight: "RCPC records show high crop-protection surveillance priority. Inspect incident points and validate recent pest pressure, affected area, and response gaps with field teams.",
+    icon: "RCPC", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.rcpc_response_gap_score) >= 45,
+    insight: "RCPC records indicate a notable treatment or response gap. Check untreated affected area, action taken, and available crop-protection support before programming.",
+    icon: "RCPC", level: "moderate"
+  },
+  {
+    condition: (d) => parseFloat(d.rcpc_high_severity_records) >= 5,
+    insight: "Multiple RCPC records show high severity or high infestation. Prioritize validation of the pest family, crop stage, and barangay cluster before recommending controls.",
+    icon: "RCPC", level: "high"
+  },
+  {
+    condition: (d) => parseFloat(d.rcpc_recent_affected_area_ha) >= 500,
+    insight: "Recent RCPC affected area is substantial. Review whether rice, corn, HVC, or cassava incidents are driving the signal and align surveillance accordingly.",
+    icon: "RCPC", level: "moderate"
+  },
+  {
     condition: (d) => d.asf_status === "Affected",
     insight: "Sanitized ASF laboratory aggregates show positive results here. Coordinate livestock biosecurity validation without exposing farmer identities.",
     icon: "🐖", level: "high"
@@ -3046,6 +3301,16 @@ const FACILITY_CATEGORIES = {
     groupColor: "#0f766e",
     types: {
       BSWM_FERTMAP: { label: "FertMap Soil Sample Points", icon: "pH", color: "#0f766e" }
+    }
+  },
+  rcpc: {
+    label: "RCPC Pest & Disease",
+    groupColor: "#b91c1c",
+    types: {
+      RCPC_RICE: { label: "RCPC Rice Incidents", icon: "R", color: "#b91c1c" },
+      RCPC_CORN: { label: "RCPC Corn Incidents", icon: "C", color: "#d97706" },
+      RCPC_HVC: { label: "RCPC HVC Incidents", icon: "HV", color: "#7c3aed" },
+      RCPC_CASSAVA: { label: "RCPC Cassava Incidents", icon: "CA", color: "#ea580c" }
     }
   }
   // Add more categories here freely, e.g.:

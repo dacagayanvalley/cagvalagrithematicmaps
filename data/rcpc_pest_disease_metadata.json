@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-06-03T03:40:14.664310+00:00",
+  "source": "Regional Crop Protection Center, DA-RFO2 shared CSV folder",
+  "source_files": {
+    "rice_pest_diseases_2015_2026.csv": {
+      "commodity_group": "rice",
+      "records": 4354
+    },
+    "corn_pest_disease_incidence_2015_2026.csv": {
+      "commodity_group": "corn",
+      "records": 3881
+    },
+    "hvc_pest_disease_incidence_2015_2026.csv": {
+      "commodity_group": "hvc",
+      "records": 1101
+    },
+    "cassava_pest_disease_incidence_2015_2026.csv": {
+      "commodity_group": "cassava",
+      "records": 116
+    }
+  },
+  "detail_file": "rcpc_pest_disease_incidence.csv",
+  "summary_file": "rcpc_municipal_summary.csv",
+  "records": 9452,
+  "municipalities": 104,
+  "columns_considered": [
+    "incident_id",
+    "source_file",
+    "source_commodity_group",
+    "season",
+    "series_code",
+    "month",
+    "month_num",
+    "year_raw",
+    "year_start",
+    "year_end",
+    "region",
+    "province",
+    "municipality",
+    "barangay",
+    "latitude",
+    "longitude",
+    "coordinate_quality",
+    "crop_affected",
+    "commodity_group",
+    "date_planted",
+    "total_area_planted_ha",
+    "variety",
+    "growth_stage",
+    "pest_observed",
+    "pest_family",
+    "monitored_validated_ha",
+    "total_area_affected_ha",
+    "percent_infestation",
+    "severity",
+    "insects_per_hill",
+    "total_area_treated_ha",
+    "total_area_untreated_ha",
+    "treatment_gap_ha",
+    "action_taken",
+    "remarks",
+    "date_reported",
+    "affected_farmers",
+    "risk_score",
+    "risk_class"
+  ],
+  "notes": [
+    "Raw source headers with embedded newlines were normalized to stable snake_case fields.",
+    "Rows with invalid or out-of-region coordinates remain in the detail CSV but are not counted as valid incident points.",
+    "Year ranges such as 2023-2024 are represented as year_start and year_end.",
+    "Risk scores are screening indicators for planning and field validation, not official loss or damage assessments."
+  ]
+}

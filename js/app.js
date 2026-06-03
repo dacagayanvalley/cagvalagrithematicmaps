@@ -40,7 +40,7 @@ const App = (() => {
       question: "Where are rice farms below 0.5 ha concentrated for targeted support?",
       category: "Rice",
       indicator: "poor_rice_farmers",
-      evidence: ["poor_rice_farmers", "poverty_2023", "rice_yield_2023", "rice_mechanization_level", "irrigated_area", "pest_disease_occurrence"],
+      evidence: ["poor_rice_farmers", "poverty_2023", "rice_yield_2023", "rice_mechanization_level", "irrigated_area", "pest_disease_occurrence", "rcpc_rice_affected_area_ha", "rcpc_top_pest_family", "rcpc_surveillance_priority_score"],
       actions: [
         "Validate rice farms below 0.5 ha and barangay-level production constraints.",
         "Check irrigation, mechanization, seed, and pest-management needs before programming.",
@@ -52,7 +52,7 @@ const App = (() => {
       question: "Where are corn farms below 0.5 ha concentrated for livelihood and productivity support?",
       category: "Corn",
       indicator: "poor_corn_farmers",
-      evidence: ["poor_corn_farmers", "poverty_2023", "corn_yield_2023", "corn_mechanization_level", "irrigated_area", "pest_disease_occurrence"],
+      evidence: ["poor_corn_farmers", "poverty_2023", "corn_yield_2023", "corn_mechanization_level", "irrigated_area", "pest_disease_occurrence", "rcpc_corn_affected_area_ha", "rcpc_top_pest_family", "rcpc_surveillance_priority_score"],
       actions: [
         "Validate corn farms below 0.5 ha and production season constraints.",
         "Review mechanization, drying, storage, and pest-management gaps.",
@@ -76,11 +76,45 @@ const App = (() => {
       question: "Where should climate-resilient and risk-reduction support be checked first?",
       category: "Climate Risk Vulnerability",
       indicator: "crva_index_rice",
-      evidence: ["crva_index_rice", "hazard_index", "hazard_flood", "hazard_drought", "ac_index", "pest_disease_occurrence", "asf_status", "asf_risk_score"],
+      evidence: ["crva_index_rice", "hazard_index", "hazard_flood", "hazard_drought", "ac_index", "pest_disease_occurrence", "rcpc_pest_pressure_score", "rcpc_response_gap_score", "asf_status", "asf_risk_score"],
       actions: [
         "Open the Climate Info panel and validate hazard exposure with local observations.",
         "Check adaptive capacity gaps before selecting climate-resilient agriculture packages.",
         "Coordinate crop, livestock, DRRM, and extension support where risks overlap."
+      ]
+    },
+    rcpc_crop_protection: {
+      label: "Prioritize RCPC crop protection surveillance",
+      question: "Where do recent RCPC pest pressure, affected area, high severity, and untreated gaps point to priority crop-protection validation?",
+      category: "Pest and Disease",
+      indicator: "rcpc_surveillance_priority_score",
+      evidence: [
+        "rcpc_surveillance_priority_score",
+        "rcpc_pest_pressure_score",
+        "rcpc_response_gap_score",
+        "rcpc_incident_records",
+        "rcpc_incident_points",
+        "rcpc_affected_area_ha",
+        "rcpc_recent_affected_area_ha",
+        "rcpc_affected_farmers",
+        "rcpc_recent_affected_farmers",
+        "rcpc_avg_infestation_pct",
+        "rcpc_max_infestation_pct",
+        "rcpc_avg_severity",
+        "rcpc_high_severity_records",
+        "rcpc_treatment_gap_ha",
+        "rcpc_recent_treatment_gap_ha",
+        "rcpc_rice_affected_area_ha",
+        "rcpc_corn_affected_area_ha",
+        "rcpc_hvc_affected_area_ha",
+        "rcpc_cassava_affected_area_ha",
+        "rcpc_top_pest_family",
+        "rcpc_risk_class"
+      ],
+      actions: [
+        "Turn on the RCPC Pest & Disease point layer and inspect rice, corn, HVC, and cassava incidents by barangay, pest family, severity, affected area, and action taken.",
+        "Prioritize field validation where recent affected area, high infestation or severity, and untreated area overlap with poverty or weak plan coverage.",
+        "Use crop-specific affected area to decide whether surveillance, biological control, chemical support, resistant variety promotion, or sanitation advisories should lead the response."
       ]
     },
     asf_biosecurity: {
@@ -284,6 +318,8 @@ const App = (() => {
         "soil_fertility_stress_score",
         "bswm_fertilizer_constraint_score",
         "bswm_coverage_confidence_score",
+        "rcpc_surveillance_priority_score",
+        "rcpc_response_gap_score",
         "plans_2027_need_gap_score"
       ],
       actions: [

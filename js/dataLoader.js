@@ -20,6 +20,8 @@ const DataLoader = (() => {
   let soilFertilityData = [];
   let bswmFertMapData = [];
   let bswmFertMapSamplesData = [];
+  let rcpcSummaryData = [];
+  let rcpcIncidenceData = [];
   let fmrProjectsData = [];
   let fmrSummaryData = [];
   let f2c2ClustersData = [];
@@ -246,6 +248,24 @@ const DataLoader = (() => {
     }
 
     try {
+      rcpcSummaryData = await fetchCSV(dataPath + "rcpc_municipal_summary.csv");
+      mergeRcpcSummaryData(rcpcSummaryData);
+      console.info(`Loaded rcpc_municipal_summary.csv: ${rcpcSummaryData.length} records`);
+    } catch (e) {
+      console.warn("rcpc_municipal_summary.csv not found. RCPC pest and disease indicators will use defaults.", e);
+      rcpcSummaryData = [];
+      addRcpcDefaults();
+    }
+
+    try {
+      rcpcIncidenceData = await fetchCSV(dataPath + "rcpc_pest_disease_incidence.csv");
+      console.info(`Loaded rcpc_pest_disease_incidence.csv: ${rcpcIncidenceData.length} incident records`);
+    } catch (e) {
+      console.warn("rcpc_pest_disease_incidence.csv not found. RCPC incident point layer will be unavailable.", e);
+      rcpcIncidenceData = [];
+    }
+
+    try {
       fmrSummaryData = await fetchCSV(dataPath + "fmr_municipal_summary.csv");
       mergeFmrSummaryData(fmrSummaryData);
       console.info(`Loaded fmr_municipal_summary.csv: ${fmrSummaryData.length} records`);
@@ -312,6 +332,10 @@ const DataLoader = (() => {
       facilitiesData = [];
     }
 
+    if (rcpcIncidenceData.length > 0) {
+      facilitiesData = facilitiesData.concat(toRcpcIncidentFacilityRows(rcpcIncidenceData));
+    }
+
     try {
       fmrProjectsData = await fetchCSV(dataPath + "fmr_projects.csv");
       facilitiesData = facilitiesData.concat(toFmrFacilityRows(fmrProjectsData));
@@ -358,6 +382,8 @@ const DataLoader = (() => {
       soilFertilityData,
       bswmFertMapData,
       bswmFertMapSamplesData,
+      rcpcSummaryData,
+      rcpcIncidenceData,
       fmrProjectsData,
       fmrSummaryData,
       f2c2ClustersData,
@@ -794,6 +820,24 @@ const DataLoader = (() => {
     addBswmFertMapDefaults();
   }
 
+  function mergeRcpcSummaryData(rows) {
+    rows.forEach(rcpcRow => {
+      const row = findMunicipalDataRow(rcpcRow.province, rcpcRow.municipality);
+      if (!row) {
+        joinMismatches.push({
+          type: "rcpc_no_csv",
+          name: `${rcpcRow.municipality}, ${rcpcRow.province}`,
+          message: "RCPC municipal summary row has no matching municipal_data.csv row"
+        });
+        return;
+      }
+
+      Object.assign(row, rcpcRow);
+    });
+
+    addRcpcDefaults();
+  }
+
 
   function mergeFmrSummaryData(rows) {
     rows.forEach(fmrRow => {
@@ -1076,6 +1120,27 @@ const DataLoader = (() => {
     });
   }
 
+  function addRcpcDefaults() {
+    const fields = getRcpcIndicatorKeys();
+    Object.values(municipalData).forEach(row => addRcpcDefaultsToRow(row, fields));
+  }
+
+  function getRcpcIndicatorKeys() {
+    return Object.keys(INDICATOR_CONFIG).filter(key => key.startsWith("rcpc_"));
+  }
+
+  function addRcpcDefaultsToRow(row, fields) {
+    fields.forEach(field => {
+      const cfg = INDICATOR_CONFIG[field] || {};
+      if (row[field] !== undefined && row[field] !== null && row[field] !== "") return;
+      row[field] = cfg.type === "categorical" ? "Data Insufficient" : "0";
+    });
+    if (!row.rcpc_commodities) row.rcpc_commodities = "";
+    if (!row.rcpc_top_commodity) row.rcpc_top_commodity = "";
+    if (!row.rcpc_top_pest_family) row.rcpc_top_pest_family = "";
+    if (!row.rcpc_risk_class) row.rcpc_risk_class = "Data Insufficient";
+  }
+
 
   function addPagasaPowerBiDefaults() {
     const numericFields = [
@@ -1265,6 +1330,44 @@ const DataLoader = (() => {
       proposed_business_enterprise: row.proposed_business_enterprise || "",
       remarks: row.with_eom ? `With EOM: ${row.with_eom}` : ""
     }));
+  }
+
+  function toRcpcIncidentFacilityRows(rows) {
+    return rows
+      .filter(row => row.coordinate_quality === "valid")
+      .map(row => {
+        const group = String(row.commodity_group || row.source_commodity_group || "").trim().toUpperCase();
+        const type = ["RICE", "CORN", "HVC", "CASSAVA"].includes(group) ? `RCPC_${group}` : "RCPC_HVC";
+        const affected = Utils.parseNumeric(row.total_area_affected_ha);
+        const infestation = Utils.parseNumeric(row.percent_infestation);
+        const severity = Utils.parseNumeric(row.severity);
+        const details = [
+          row.pest_observed ? `Pest: ${row.pest_observed}` : "",
+          affected !== null ? `Affected: ${affected} ha` : "",
+          infestation !== null ? `Infestation: ${infestation}%` : "",
+          severity !== null ? `Severity: ${severity}` : "",
+          row.action_taken ? `Action: ${row.action_taken}` : "",
+          row.remarks ? `Remarks: ${row.remarks}` : ""
+        ].filter(Boolean);
+        return {
+          facility_id: row.incident_id,
+          facility_name: `${row.pest_family || row.pest_observed || "RCPC incident"} - ${row.crop_affected || group}`,
+          facility_type: type,
+          province: row.province,
+          municipality: row.municipality,
+          barangay: row.barangay,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          status: row.risk_class || "Watchlist",
+          capacity: row.percent_infestation ? `${row.percent_infestation}% infestation` : "",
+          service_area_ha: row.total_area_affected_ha || "",
+          farmer_beneficiaries: row.affected_farmers || "",
+          year_constructed: row.year_end || row.year_start || "",
+          commodity: row.crop_affected || row.commodity_group || "",
+          banner_program: "RCPC Pest and Disease",
+          remarks: details.join(" | ")
+        };
+      });
   }
 
   function toIrrigationFacilityRows(rows) {
@@ -1627,6 +1730,8 @@ const DataLoader = (() => {
     get soilFertilityData() { return soilFertilityData; },
     get bswmFertMapData() { return bswmFertMapData; },
     get bswmFertMapSamplesData() { return bswmFertMapSamplesData; },
+    get rcpcSummaryData() { return rcpcSummaryData; },
+    get rcpcIncidenceData() { return rcpcIncidenceData; },
     get fmrProjectsData() { return fmrProjectsData; },
     get fmrSummaryData() { return fmrSummaryData; },
     get f2c2ClustersData() { return f2c2ClustersData; },
