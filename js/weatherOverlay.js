@@ -25,6 +25,7 @@ const WeatherOverlay = (() => {
   const LAYERS = [
     { id: "radar",     icon: "&#x1F4E1;", label: "Doppler Radar",    sub: "Animated rainfall radar" },
     { id: "satellite", icon: "&#x1F6F0;", label: "Satellite Imagery", sub: "Infrared cloud tops" },
+    { id: "cis",       icon: "CIS",        label: "CIS Weather Portal", sub: "APA climate information system", action: "cis-weather", link: "https://cis.apa.da.gov.ph/cis" },
     { id: "observed",  icon: "&#x1F4C8;", label: "Observed Weather",  sub: "PAGASA synoptic stations", link: "https://bagong.pagasa.dost.gov.ph/climate/agri-weather/farm-weather-forecast" },
     { id: "rainfall",  icon: "&#x1F327;", label: "Rainfall (3hr mm)", sub: "Near real-time accumulation", link: "https://www.panahon.gov.ph/" },
     { id: "tenday",    icon: "&#x1F4C5;", label: "10-Day Forecast",   sub: "PAGASA climate prediction", link: "https://bagong.pagasa.dost.gov.ph/climate/climate-prediction/10-day-climate-forecast" }
@@ -77,8 +78,13 @@ const WeatherOverlay = (() => {
 
   function buildPanelContent(layer) {
     if (!LIVE[layer.id]) {
+      if (layer.action === "cis-weather") {
+        return '<button class="wop-ext-link wop-action-link" type="button" data-action="cis-weather">'
+          + 'Open CIS weather portal</button>'
+          + '<a class="wop-secondary-link" href="' + layer.link + '" target="_blank" rel="noopener">Open in a new tab</a>';
+      }
       if (layer.link) {
-        return '<a class="wop-ext-link" href="' + layer.link + '" target="_blank">'
+        return '<a class="wop-ext-link" href="' + layer.link + '" target="_blank" rel="noopener">'
           + '&#x1F517; Open in PAGASA / DA Portal</a>';
       }
       return '';
@@ -156,6 +162,17 @@ const WeatherOverlay = (() => {
         var pct = cd.querySelector("#wop-opct-" + id);
         if (pct) pct.textContent = e.target.value + "%";
         applyOpacity(id);
+      });
+    });
+
+    cd.querySelectorAll('[data-action="cis-weather"]').forEach(function(btn) {
+      btn.addEventListener("click", function(e) {
+        e.preventDefault();
+        if (typeof window.openCisWeatherPortal === "function") {
+          window.openCisWeatherPortal();
+        } else {
+          window.open("https://cis.apa.da.gov.ph/cis", "_blank", "noopener");
+        }
       });
     });
   }

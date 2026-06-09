@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
 
   <!-- App Styles -->
-  <link rel="stylesheet" href="css/styles.css?v=20260603-bswm-fertmap-layer" />
+  <link rel="stylesheet" href="css/styles.css?v=20260609-cis-weather" />
 </head>
 <body>
 
@@ -74,10 +74,36 @@
       <button class="header-btn" id="fit-btn" title="Fit map to region">⊕ Fit</button>
       <button class="header-btn" id="refresh-defaults" title="Return controls, filters, styles, and layers to defaults">↺ Refresh</button>
       <button class="header-btn climate-toggle-btn" id="btn-climate-panel" title="Toggle Climate Information Panel">🌦️ Climate Info</button>
+      <button class="header-btn" id="btn-cis-weather" title="Open CIS weather portal">CIS Weather</button>
     </div>
   </header>
 
   <div id="mobile-panel-backdrop" hidden></div>
+
+  <div id="cis-weather-modal" class="cis-weather-modal" aria-hidden="true">
+    <div class="cis-weather-backdrop" id="cis-weather-backdrop"></div>
+    <section class="cis-weather-dialog" role="dialog" aria-modal="true" aria-labelledby="cis-weather-title">
+      <div class="cis-weather-head">
+        <div>
+          <div class="cis-weather-kicker">Weather Portal</div>
+          <h2 id="cis-weather-title">CIS - APA Project</h2>
+        </div>
+        <div class="cis-weather-actions">
+          <a class="cis-weather-link" href="https://cis.apa.da.gov.ph/cis" target="_blank" rel="noopener">Open full site</a>
+          <button class="cis-weather-close" id="cis-weather-close" type="button" aria-label="Close CIS weather portal">&times;</button>
+        </div>
+      </div>
+      <iframe
+        class="cis-weather-frame"
+        id="cis-weather-frame"
+        title="CIS - APA Project weather portal"
+        src="about:blank"
+        data-src="https://cis.apa.da.gov.ph/cis"
+        loading="lazy"
+        referrerpolicy="strict-origin-when-cross-origin">
+      </iframe>
+    </section>
+  </div>
 
   <!-- ================================================================
        SIDEBAR
@@ -419,9 +445,9 @@
 <script src="js/visualizations.js?v=20260603-bswm-fertmap-layer"></script>
 <script src="js/mapLayers.js?v=20260603-bswm-fertmap-layer"></script>
 <script src="js/charts.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/weatherOverlay.js?v=20260603-bswm-fertmap-layer"></script>
+<script src="js/weatherOverlay.js?v=20260609-cis-weather"></script>
 <script src="js/climate.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/app.js?v=20260603-bswm-fertmap-layer"></script>
+<script src="js/app.js?v=20260609-cis-weather"></script>
 
 </body>
 </html>

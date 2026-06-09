@@ -1824,6 +1824,14 @@ const App = (() => {
       }
     });
 
+    const cisWeatherBtn = document.getElementById("btn-cis-weather");
+    if (cisWeatherBtn) cisWeatherBtn.addEventListener("click", () => toggleCisWeatherPortal(true));
+    const cisWeatherClose = document.getElementById("cis-weather-close");
+    const cisWeatherBackdrop = document.getElementById("cis-weather-backdrop");
+    if (cisWeatherClose) cisWeatherClose.addEventListener("click", () => toggleCisWeatherPortal(false));
+    if (cisWeatherBackdrop) cisWeatherBackdrop.addEventListener("click", () => toggleCisWeatherPortal(false));
+    window.openCisWeatherPortal = () => toggleCisWeatherPortal(true);
+
     // Announcement splash
     const announcementOpen = document.getElementById("announcement-open");
     const announcementClose = document.getElementById("announcement-close");
@@ -1841,6 +1849,7 @@ const App = (() => {
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") showAnnouncementSplash(false);
       if (e.key === "Escape") toggleScenarioExplainer(false);
+      if (e.key === "Escape") toggleCisWeatherPortal(false);
     });
 
     window.addEventListener("area:selected", (e) => {
@@ -2016,6 +2025,19 @@ const App = (() => {
     const name = selectedArea ? Utils.getAreaName(selectedArea) : "Tuguegarao City, Cagayan";
     const centroid = selectedCentroid || APP_CONFIG.mapCenter;
     ClimatePanel.openForLocation(centroid[0], centroid[1], name);
+  }
+
+  function toggleCisWeatherPortal(show) {
+    const modal = document.getElementById("cis-weather-modal");
+    const frame = document.getElementById("cis-weather-frame");
+    if (!modal) return;
+
+    modal.classList.toggle("open", !!show);
+    modal.setAttribute("aria-hidden", show ? "false" : "true");
+
+    if (show && frame && frame.src === "about:blank") {
+      frame.src = frame.dataset.src || "https://cis.apa.da.gov.ph/cis";
+    }
   }
 
   // ============================================================
