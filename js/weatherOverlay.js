@@ -25,7 +25,7 @@ const WeatherOverlay = (() => {
   const LAYERS = [
     { id: "radar",     icon: "&#x1F4E1;", label: "Doppler Radar",    sub: "Animated rainfall radar" },
     { id: "satellite", icon: "&#x1F6F0;", label: "Satellite Imagery", sub: "Infrared cloud tops" },
-    { id: "cis",       icon: "CIS",        label: "CIS Weather Portal", sub: "APA climate information system", action: "cis-weather", link: "https://cis.apa.da.gov.ph/cis" },
+    { id: "cis",       icon: "APA",        label: "APA CIS Weather", sub: "APA climate information system", action: "cis-weather", link: "https://cis.apa.da.gov.ph/cis" },
     { id: "observed",  icon: "&#x1F4C8;", label: "Observed Weather",  sub: "PAGASA synoptic stations", link: "https://bagong.pagasa.dost.gov.ph/climate/agri-weather/farm-weather-forecast" },
     { id: "rainfall",  icon: "&#x1F327;", label: "Rainfall (3hr mm)", sub: "Near real-time accumulation", link: "https://www.panahon.gov.ph/" },
     { id: "tenday",    icon: "&#x1F4C5;", label: "10-Day Forecast",   sub: "PAGASA climate prediction", link: "https://bagong.pagasa.dost.gov.ph/climate/climate-prediction/10-day-climate-forecast" }
@@ -80,7 +80,7 @@ const WeatherOverlay = (() => {
     if (!LIVE[layer.id]) {
       if (layer.action === "cis-weather") {
         return '<button class="wop-ext-link wop-action-link" type="button" data-action="cis-weather">'
-          + 'Open CIS weather portal</button>'
+          + 'Open APA CIS Weather</button>'
           + '<a class="wop-secondary-link" href="' + layer.link + '" target="_blank" rel="noopener">Open in a new tab</a>';
       }
       if (layer.link) {
