@@ -53,6 +53,18 @@ DETAIL_FIELDS = [
     "office_function",
     "tier_1",
     "tier_2",
+    "result_level",
+    "pap_type",
+    "prexc_program",
+    "prexc_subprogram",
+    "indicator_id",
+    "indicator_level_1",
+    "indicator_level_2",
+    "indicator_level_3",
+    "indicator_specify_type",
+    "indicator_match_basis",
+    "result_chain",
+    "data_structure_note",
     "activity",
     "activity_context",
     "original_activity",
@@ -130,6 +142,38 @@ FUNCTION_ALIASES = {
     "IRRIGATIONNETWORKSERVICES": ("Other Functions", "AMEFIP"),
     "REGULATORYSERVICES": ("Other Functions", "Regulatory Services"),
 }
+
+REFERENCE_RESULT_CHAIN = {
+    "outcomes": "Long/medium-term and sector outcomes are tracked through PDP, NAFMIP, AFMP, commodity roadmaps, and program/project logframes.",
+    "outputs": "Operational results are immediate program/project outputs reported against GAA, OPIF/PREXC, and program commitments.",
+    "pap": "Programs group projects and activities; projects are time-bound schemes, while activities deliver specific outputs supporting a program or project.",
+    "indicators": "Performance indicators measure quantity, quality, timeliness, or cost and are grouped by PREXC Program, PREXC Sub-Program, and PI Level 1-3.",
+}
+
+PROGRAM_INDICATOR_SHEETS = {
+    "Rice Program": "NRP",
+    "Corn Program": "NCP",
+    "High Value Crops": "HVCDP",
+    "LIVESTOCK": "NLP",
+    "OAP": "NOAP",
+    "NUPAP": "NUPAP",
+    "HALAL": "HALAL",
+}
+
+INDICATOR_RULES = [
+    {"keywords": ["SEED", "SEEDLING", "PLANTING MATERIAL"], "unit_keywords": ["KG", "BAG", "PACK", "SACHET", "NUMBER", "PIECE"], "indicator_id": "", "level_1": "Seeds and planting materials distributed", "level_2": "Seeds/seedlings/planting materials distributed", "level_3": "Seeds and planting materials distributed"},
+    {"keywords": ["FERTILIZER", "SOIL AMELIORANT", "BIOFERTILIZER", "COMPOST"], "unit_keywords": ["KG", "BAG", "LITER", "GALLON", "SACK"], "indicator_id": "PSS046", "level_1": "Agri-chemicals distributed", "level_2": "Agri-chemicals distributed Solid", "level_3": "Agri-chemicals distributed_kg"},
+    {"keywords": ["PESTICIDE", "INSECTICIDE", "FUNGICIDE", "HERBICIDE", "CHEMICAL", "PHEROMONE"], "unit_keywords": ["LITER", "GALLON", "KG", "PACK", "PIECE"], "indicator_id": "PSS047", "level_1": "Agri-chemicals distributed", "level_2": "Agri-chemicals distributed Liquid/Solid", "level_3": "Agri-chemicals distributed by unit"},
+    {"keywords": ["ANIMAL", "CATTLE", "CARABAO", "GOAT", "SHEEP", "SWINE", "CHICKEN", "DUCK", "BEE"], "unit_keywords": ["HEAD", "NUMBER"], "indicator_id": "PSS002", "level_1": "Animals distributed", "level_2": "Livestock/poultry distributed", "level_3": "Animals distributed by type"},
+    {"keywords": ["MACHIN", "EQUIPMENT", "FACILITY", "GREENHOUSE", "POSTHARVEST", "POST-HARVEST", "PROCESSING"], "unit_keywords": ["UNIT", "SET", "NUMBER"], "indicator_id": "", "level_1": "Production and postharvest facilities provided", "level_2": "Facilities, machinery, and equipment provided", "level_3": "Facilities/machinery/equipment provided"},
+    {"keywords": ["TRAINING", "CAPACITY", "SCHOOL", "FARMER FIELD", "CONDUCT OF"], "unit_keywords": ["BATCH", "NUMBER", "PERSON", "PARTICIPANT"], "indicator_id": "", "level_1": "Training and extension services provided", "level_2": "Training/learning events conducted", "level_3": "Participants or events served"},
+    {"keywords": ["FMR", "FARM-TO-MARKET", "ROAD", "CONCRETING", "BRIDGE"], "unit_keywords": ["KM", "KILOMETER", "METER"], "indicator_id": "", "level_1": "Infrastructure projects completed", "level_2": "Farm-to-market roads constructed/rehabilitated", "level_3": "FMR length or project count"},
+    {"keywords": ["IRRIGATION", "PUMP", "CANAL", "DIVERSION DAM", "SWIP", "SOLAR-POWERED"], "unit_keywords": ["UNIT", "HA", "KM", "NUMBER"], "indicator_id": "", "level_1": "Irrigation support provided", "level_2": "Irrigation facilities constructed/rehabilitated", "level_3": "Irrigation facility, area, or length"},
+    {"keywords": ["MARKET", "LINKAGE", "PROMOTION", "TRADE FAIR", "KADIWA"], "unit_keywords": ["NUMBER", "EVENT", "GROUP"], "indicator_id": "", "level_1": "Market development services provided", "level_2": "Market linkage and promotion services provided", "level_3": "Market events/linkages/beneficiaries served"},
+    {"keywords": ["RESEARCH", "STUDY", "TECHNOLOGY", "DEMO", "VALIDATION"], "unit_keywords": ["NUMBER", "PROJECT", "STUDY"], "indicator_id": "", "level_1": "Research and development services provided", "level_2": "Studies, technologies, and demonstrations conducted", "level_3": "R4 outputs completed"},
+    {"keywords": ["SOIL", "MAP", "FERTILITY", "SAMPLE", "ANALYSIS"], "unit_keywords": ["NUMBER", "SAMPLE", "MAP", "HA"], "indicator_id": "", "level_1": "Soil health and fertility services provided", "level_2": "Soil tests/maps/interventions provided", "level_3": "Soil health outputs delivered"},
+    {"keywords": ["MONITORING", "EVALUATION", "REPORT", "ASSESSMENT"], "unit_keywords": ["REPORT", "NUMBER", "STUDY"], "indicator_id": "", "level_1": "Monitoring and evaluation reports disseminated", "level_2": "Monitoring/evaluation studies or reports completed", "level_3": "M&E output completed"},
+]
 
 
 def column_index(cell_ref):
@@ -436,6 +480,118 @@ def normalize_all_programs_function(value, fallback=None):
         return fallback
     return ("Technical Support Services", "Production Support Services")
 
+
+def infer_prexc(row):
+    text = normalize_key(" ".join([
+        row.get("activity", ""),
+        row.get("activity_context", ""),
+        row.get("program", ""),
+        row.get("source_note", ""),
+    ]))
+    tier_1 = clean_text(row.get("tier_1"))
+    tier_2 = clean_text(row.get("tier_2") or row.get("office_function"))
+
+    if not tier_1 or not tier_2:
+        if any(term in text for term in ["TRAINING", "CAPACITY", "SCHOOL", "LEARNING"]):
+            tier_1, tier_2 = "Technical Support Services", "Extension Support, Education and Training Services"
+        elif any(term in text for term in ["MARKET", "LINKAGE", "PROMOTION", "KADIWA"]):
+            tier_1, tier_2 = "Other Functions", "Market Development Services"
+        elif any(term in text for term in ["RESEARCH", "STUDY", "TECHNOLOGY", "DEMO"]):
+            tier_1, tier_2 = "Other Functions", "Research and Development (R4)"
+        elif any(term in text for term in ["REGULATORY", "CERTIFICATION", "INSPECTION", "QUARANTINE"]):
+            tier_1, tier_2 = "Other Functions", "Regulatory Services"
+        elif any(term in text for term in ["FMR", "FARMTOMARKET", "ROAD", "IRRIGATION", "SWIP", "PUMP"]):
+            tier_1, tier_2 = "Other Functions", "AMEFIP"
+        else:
+            tier_1, tier_2 = "Technical Support Services", "Production Support Services"
+
+    return tier_1, tier_2
+
+
+def infer_pap_type(row):
+    program = clean_text(row.get("program"))
+    activity = normalize_key(row.get("activity"))
+    text = normalize_key(" ".join([program, row.get("activity", ""), row.get("source_note", "")]))
+    if any(term in text for term in ["FMR", "FARMTOMARKET", "CONCRETING", "BRIDGE", "IRRIGATION", "SWIP", "DIVERSIONDAM", "PRDP"]):
+        return "Project"
+    if activity and any(term in activity for term in ["DISTRIBUT", "TRAINING", "CONDUCT", "PROCURE", "PROVID", "ESTABLISH", "MONITOR", "ASSESS"]):
+        return "Activity"
+    if program:
+        return "Program"
+    return "Activity"
+
+
+def infer_result_level(row):
+    text = normalize_key(" ".join([row.get("activity", ""), row.get("source_note", "")]))
+    if any(term in text for term in ["OUTCOME", "IMPACT", "EVALUATIONSTUDY"]):
+        return "Program/project outcome"
+    return "Operational output"
+
+
+def indicator_text(row):
+    return normalize_key(" ".join([
+        row.get("activity", ""),
+        row.get("activity_context", ""),
+        row.get("original_activity", ""),
+        row.get("source_note", ""),
+        row.get("unit", ""),
+        row.get("commodity", ""),
+    ]))
+
+
+def match_indicator(row):
+    text = indicator_text(row)
+    unit_text = normalize_key(row.get("unit"))
+    best = None
+    best_score = 0
+    best_hits = []
+    for rule in INDICATOR_RULES:
+        hits = [term for term in rule["keywords"] if normalize_key(term) in text]
+        unit_hits = [term for term in rule.get("unit_keywords", []) if normalize_key(term) in unit_text]
+        score = len(hits) * 2 + len(unit_hits)
+        if score > best_score:
+            best = rule
+            best_score = score
+            best_hits = hits + unit_hits
+    if best:
+        return {
+            "indicator_id": best["indicator_id"],
+            "indicator_level_1": best["level_1"],
+            "indicator_level_2": best["level_2"],
+            "indicator_level_3": best["level_3"],
+            "indicator_match_basis": "Matched activity/unit terms: " + ", ".join(sorted(set(best_hits))),
+        }
+
+    activity = clean_text(row.get("activity") or row.get("source_note"))
+    unit = clean_text(row.get("unit"))
+    fallback = activity or clean_text(row.get("program")) or "Unclassified output"
+    return {
+        "indicator_id": "",
+        "indicator_level_1": fallback,
+        "indicator_level_2": fallback,
+        "indicator_level_3": f"{fallback}_{unit}" if unit else fallback,
+        "indicator_match_basis": "No direct indicator keyword match; grouped by extracted activity and unit.",
+    }
+
+
+def enrich_detail_row(row):
+    row = default_detail_fields(row)
+    tier_1, tier_2 = infer_prexc(row)
+    row["tier_1"] = row.get("tier_1") or tier_1
+    row["tier_2"] = row.get("tier_2") or tier_2
+    row["office_function"] = row.get("office_function") or row["tier_2"]
+    row["prexc_program"] = row.get("prexc_program") or row["tier_1"]
+    row["prexc_subprogram"] = row.get("prexc_subprogram") or row["tier_2"]
+    row["pap_type"] = row.get("pap_type") or infer_pap_type(row)
+    row["result_level"] = row.get("result_level") or infer_result_level(row)
+
+    match = match_indicator(row)
+    for key, value in match.items():
+        row[key] = row.get(key) or value
+    row["indicator_specify_type"] = row.get("indicator_specify_type") or PROGRAM_INDICATOR_SHEETS.get(row.get("program"), "")
+    row["result_chain"] = row.get("result_chain") or "Outcome framework -> PREXC/OPIF program -> PAP -> operational output -> performance indicator"
+    row["data_structure_note"] = row.get("data_structure_note") or "Grouped using OPIF/PREXC guidance and the relevant-indicators workbook fields: PREXC Program, PREXC Sub-Program, PI Level 1, PI Level 2, PI Level 3, Unit."
+    return row
 
 def is_all_programs_heading(row):
     activity = clean_text((row + [""])[0])
@@ -1144,7 +1300,7 @@ def summarize_rows(files, municipal_csv):
                                 "text": token,
                             })
 
-    return [default_detail_fields(row) for row in details], unmatched
+    return [enrich_detail_row(row) for row in details], unmatched
 
 
 def aggregate(details):
@@ -1357,3 +1513,5 @@ def main():
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

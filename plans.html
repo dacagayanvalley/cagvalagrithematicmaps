@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AgriPlan Cagayan Valley</title>
 
-  <link rel="stylesheet" href="css/plans.css?v=20260708-activity-detail">
+  <link rel="stylesheet" href="css/plans.css?v=20260708-opif-indicators">
 </head>
 <body data-theme="dark">
   <div id="plans-app">
@@ -68,8 +68,15 @@
         </section>
 
         <section class="filter-section">
+          <div class="section-label">Indicator Group</div>
+          <select id="indicator-filter">
+            <option value="all">All Indicator Groups</option>
+          </select>
+        </section>
+
+        <section class="filter-section">
           <div class="section-label">Search</div>
-          <input type="text" id="search-filter" placeholder="Municipality, activity, barangay">
+          <input type="text" id="search-filter" placeholder="Municipality, activity, indicator">
         </section>
 
         <section class="filter-section">
@@ -139,9 +146,9 @@
             <small>extracted units</small>
           </article>
           <article class="kpi-card">
-            <span>Units Used</span>
+            <span>Indicator Groups</span>
             <strong id="kpi-units">0</strong>
-            <small>distinct UOMs</small>
+            <small>PI Level 1 groups</small>
           </article>
           <article class="kpi-card">
             <span>FMR Length</span>
@@ -168,16 +175,24 @@
             <canvas id="commodity-chart"></canvas>
           </article>
           <article class="analysis-panel">
-            <div class="panel-title">2027 Budget by Tier 1</div>
+            <div class="panel-title">Budget by PREXC Program</div>
             <canvas id="tier1-chart"></canvas>
           </article>
           <article class="analysis-panel">
-            <div class="panel-title">2027 Budget by Tier 2</div>
+            <div class="panel-title">Budget by PREXC Subprogram</div>
             <canvas id="tier2-chart"></canvas>
           </article>
           <article class="analysis-panel">
-            <div class="panel-title">Top Activities</div>
-            <canvas id="activity-chart"></canvas>
+            <div class="panel-title">Budget by PAP Type</div>
+            <canvas id="pap-chart"></canvas>
+          </article>
+          <article class="analysis-panel">
+            <div class="panel-title">Budget by Result Level</div>
+            <canvas id="result-chart"></canvas>
+          </article>
+          <article class="analysis-panel">
+            <div class="panel-title">Budget by PI Level 1</div>
+            <canvas id="indicator-chart"></canvas>
           </article>
           <article class="analysis-panel">
             <div class="panel-title">Physical Target by Unit</div>
@@ -187,7 +202,14 @@
             <div class="panel-title">Commodity Timeline</div>
             <canvas id="year-chart"></canvas>
           </article>
-          <article class="analysis-panel insight-panel">
+          <article class="analysis-panel insight-panel reference-panel">
+            <div class="panel-title">OPIF / PREXC Structure</div>
+            <div class="reference-stack">
+              <div><strong>Results chain</strong><span>Outcome framework -> PREXC/OPIF program -> PAP -> operational output -> performance indicator.</span></div>
+              <div><strong>PAP grouping</strong><span>Programs group projects and activities; projects are time-bound schemes, activities deliver specific outputs.</span></div>
+              <div><strong>Indicator grouping</strong><span>Rows use PREXC Program, PREXC Sub-Program, PI Level 1, PI Level 2, PI Level 3, and unit fields from the relevant-indicators workbook.</span></div>
+            </div>
+          </article>          <article class="analysis-panel insight-panel">
             <div class="panel-title">Planning Notes</div>
             <div id="planning-notes"></div>
           </article>
@@ -213,7 +235,9 @@
                   <th><button class="sort-btn" data-sort="municipality">Municipality</button></th>
                   <th><button class="sort-btn" data-sort="year">Year</button></th>
                   <th><button class="sort-btn" data-sort="program">Commodity / Program</button></th>
-                  <th><button class="sort-btn" data-sort="function">Tier / Function</button></th>
+                  <th><button class="sort-btn" data-sort="pap">PAP / Result</button></th>
+                  <th><button class="sort-btn" data-sort="function">PREXC</button></th>
+                  <th><button class="sort-btn" data-sort="indicator">Indicator</button></th>
                   <th><button class="sort-btn" data-sort="activity">Activity</button></th>
                   <th><button class="sort-btn" data-sort="unit">Unit</button></th>
                   <th><button class="sort-btn" data-sort="physical">Physical</button></th>
@@ -231,6 +255,8 @@
 
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="js/plansDashboard.js?v=20260708-activity-detail"></script>
+  <script src="js/plansDashboard.js?v=20260708-opif-indicators"></script>
 </body>
 </html>
+
+

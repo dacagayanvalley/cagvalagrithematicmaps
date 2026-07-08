@@ -1,5 +1,5 @@
 const PlansDashboard = (() => {
-  const VERSION = "20260708-activity-detail";
+  const VERSION = "20260708-opif-indicators";
   const DETAIL_URL = `data/plans_projects_2025_2027_details.csv?v=${VERSION}`;
   const METADATA_URL = `data/plans_projects_metadata.json?v=${VERSION}`;
   const VERSION_MANIFEST_URL = `data/plans_versions/manifest.json?v=${VERSION}`;
@@ -32,6 +32,7 @@ const PlansDashboard = (() => {
   let activeYear = "2027";
   let activeCommodity = "all";
   let hvcCommodityFilter = "all";
+  let indicatorFilter = "all";
   let provinceFilter = "all";
   let districtFilter = "all";
   let municipalityFilter = "all";
@@ -69,6 +70,7 @@ const PlansDashboard = (() => {
         rows = result.data.map(normalizeRow).filter(row => !isSummaryOnlyRow(row));
         buildProvinceFilter();
         buildHvcCommodityFilter();
+        buildIndicatorFilter();
         updateGeographyFilters();
         update();
       },
@@ -213,12 +215,26 @@ const PlansDashboard = (() => {
       unitLabel: row.unit || "Unspecified",
       commodityLabel: row.commodity || row.program || "",
       officeFunction: row.office_function || row.tier_2 || "",
-      tier1: row.tier_1 || "",
-      tier2: row.tier_2 || row.office_function || "",
+      tier1: row.tier_1 || row.prexc_program || "",
+      tier2: row.tier_2 || row.prexc_subprogram || row.office_function || "",
+      prexcProgram: row.prexc_program || row.tier_1 || "",
+      prexcSubprogram: row.prexc_subprogram || row.tier_2 || row.office_function || "",
+      papType: row.pap_type || "Activity",
+      resultLevel: row.result_level || "Operational output",
+      indicatorId: row.indicator_id || "",
+      indicatorLevel1: row.indicator_level_1 || row.activity || "Unspecified Indicator",
+      indicatorLevel2: row.indicator_level_2 || row.indicator_level_1 || "",
+      indicatorLevel3: row.indicator_level_3 || row.indicator_level_2 || "",
+      indicatorSpecifyType: row.indicator_specify_type || "",
+      indicatorMatchBasis: row.indicator_match_basis || "Grouped by extracted activity and unit.",
+      resultChain: row.result_chain || "Outcome framework -> PREXC/OPIF program -> PAP -> operational output -> performance indicator",
+      dataStructureNote: row.data_structure_note || "",
       searchText: [
         row.province, row.municipality, row.program, row.activity,
         row.commodity, row.office_function, row.tier_1, row.tier_2,
-        row.activity_context, row.original_activity, row.target_scope,
+        row.prexc_program, row.prexc_subprogram, row.pap_type, row.result_level,
+        row.indicator_id, row.indicator_level_1, row.indicator_level_2, row.indicator_level_3,
+        row.indicator_match_basis, row.activity_context, row.original_activity, row.target_scope,
         row.district, row.unit, row.source_note, row.source_file, row.sheet
       ].join(" ").toLowerCase()
     };
@@ -276,6 +292,11 @@ const PlansDashboard = (() => {
       update();
     });
 
+    document.getElementById("indicator-filter").addEventListener("change", event => {
+      indicatorFilter = event.target.value;
+      update();
+    });
+
     document.getElementById("search-filter").addEventListener("input", event => {
       searchTerm = event.target.value.trim().toLowerCase();
       update();
@@ -317,6 +338,7 @@ const PlansDashboard = (() => {
         document.getElementById("search-filter").value = "";
         document.getElementById("activity-search").value = "";
         document.getElementById("hvc-commodity-filter").value = "all";
+        document.getElementById("indicator-filter").value = "all";
         loadDataset();
       });
     }
@@ -428,6 +450,22 @@ const PlansDashboard = (() => {
     select.disabled = activeCommodity !== "hvc";
   }
 
+  function buildIndicatorFilter() {
+    const select = document.getElementById("indicator-filter");
+    if (!select) return;
+
+    const indicators = [...new Set(rows
+      .map(row => row.indicatorLevel1)
+      .filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b));
+
+    if (indicatorFilter !== "all" && !indicators.includes(indicatorFilter)) indicatorFilter = "all";
+    select.innerHTML = `<option value="all">All Indicator Groups</option>` +
+      indicators.map(indicator =>
+        `<option value="${escapeHTML(indicator)}" ${indicator === indicatorFilter ? "selected" : ""}>${escapeHTML(indicator)}</option>`
+      ).join("");
+    select.value = indicatorFilter;
+  }
   function compareDistricts(a, b) {
     const av = districtOrder(a.split("|").pop());
     const bv = districtOrder(b.split("|").pop());
@@ -511,6 +549,7 @@ const PlansDashboard = (() => {
       if (municipalityFilter !== "all" && row.municipality !== municipalityFilter) return false;
       if (programs && !programs.includes(row.program)) return false;
       if (commodity === "hvc" && hvcCommodityFilter !== "all" && row.commodityLabel !== hvcCommodityFilter) return false;
+      if (indicatorFilter !== "all" && row.indicatorLevel1 !== indicatorFilter) return false;
       if (searchTerm && !row.searchText.includes(searchTerm)) return false;
       return true;
     });
@@ -529,10 +568,10 @@ const PlansDashboard = (() => {
     const municipalities = new Set(data.filter(row => row.municipality).map(row => `${row.province}|${row.municipality}`));
     setText("kpi-items", formatNumber(data.length));
     setText("kpi-budget", formatNumber(sum(data, "budgetValue")));
-    const units = new Set(data.map(row => row.unitLabel).filter(unit => unit && unit !== "Unspecified"));
+    const indicatorGroups = new Set(data.map(row => row.indicatorLevel1).filter(Boolean));
     setText("kpi-municipalities", formatNumber(municipalities.size));
     setText("kpi-physical", formatDecimal(sum(data, "physicalValue")));
-    setText("kpi-units", formatNumber(units.size));
+    setText("kpi-units", formatNumber(indicatorGroups.size));
     setText("kpi-length", formatDecimal(sum(data, "lengthValue")));
   }
 
@@ -543,6 +582,7 @@ const PlansDashboard = (() => {
     const provinceText = provinceFilter === "all" ? "all provinces" : provinceFilter;
     const districtText = districtFilter === "all" ? "all districts" : (rows.find(row => row.districtKey === districtFilter)?.displayDistrict || districtFilter);
     const municipalityText = municipalityFilter === "all" ? "all municipalities" : municipalityFilter;
+    const indicatorText = indicatorFilter === "all" ? "all indicator groups" : indicatorFilter;
     document.getElementById("lens-summary").innerHTML = `
       <div><strong>${escapeHTML(commodity)}</strong>${escapeHTML(YEAR_LABELS[activeYear] || activeYear)}</div>
       ${hvcCommodity ? `<div>HVCDP commodity: ${escapeHTML(hvcCommodity)}</div>` : ""}
@@ -558,7 +598,9 @@ const PlansDashboard = (() => {
     renderCategoryChart("commodity-chart", groupBudget(data, "commodity").slice(0, 10), "Budget", "#2563eb");
     renderCategoryChart("tier1-chart", groupBudget(data, "tier1").slice(0, 8), "Budget", "#7c3aed");
     renderCategoryChart("tier2-chart", groupBudget(data, "tier2").slice(0, 8), "Budget", "#0f766e");
-    renderCategoryChart("activity-chart", groupBudget(data, "activity").slice(0, 10), "Budget", "#b91c1c");
+    renderCategoryChart("pap-chart", groupBudget(data, "papType").slice(0, 8), "Budget", "#c2410c");
+    renderCategoryChart("result-chart", groupBudget(data, "resultLevel").slice(0, 8), "Budget", "#2563eb");
+    renderCategoryChart("indicator-chart", groupBudget(data, "indicatorLevel1").slice(0, 10), "Budget", "#b91c1c");
     renderCategoryChart("unit-chart", groupPhysicalByUnit(data).slice(0, 10), "Physical target", "#047857", value => `${formatDecimal(value)} units`);
     renderYearChart();
   }
@@ -576,6 +618,12 @@ const PlansDashboard = (() => {
             ? (row.tier1 || "Unspecified Tier 1")
             : field === "tier2"
               ? (row.tier2 || "Unspecified Tier 2")
+            : field === "papType"
+              ? (row.papType || "Unspecified PAP Type")
+            : field === "resultLevel"
+              ? (row.resultLevel || "Unspecified Result Level")
+            : field === "indicatorLevel1"
+              ? (row.indicatorLevel1 || "Unspecified Indicator")
             : field === "activity"
               ? (row.activity || row.source_note || "Unspecified Activity")
           : (row[field] || "Unspecified");
@@ -703,7 +751,7 @@ const PlansDashboard = (() => {
       if (topActivity) notes.push(["", `Top activity by budget: ${topActivity.label} at ${formatNumber(topActivity.value)} PHP '000.`]);
       const topUnit = groupPhysicalByUnit(data)[0];
       if (topUnit) notes.push(["", `Largest extracted physical target unit: ${topUnit.label} with ${formatDecimal(topUnit.value)} total units.`]);
-      if (activeYear === "2027") notes.push(["warn", "Use this view to compare proposed allocations with the need-gap layer in the decision map before realignment."]);
+      if (activeYear === "2027") notes.push(["warn", "Indicator and PAP groupings are inferred from OPIF/PREXC guidance, the relevant-indicators workbook, activity text, and units. Review match basis before using them as official OPIF reports."]);
       if (zeroBudget > 0) notes.push(["warn", `${zeroBudget} records have no extracted budget value; verify the source workbook before treating them as unfunded.`]);
       if (budget <= 0) notes.push(["danger", "The current filter has no extracted budget. This may be a real gap or a workbook encoding issue."]);
     }
@@ -729,10 +777,17 @@ const PlansDashboard = (() => {
         <td>${escapeHTML(row.displayMunicipality)}</td>
         <td>${escapeHTML(row.year)}</td>
         <td>${escapeHTML(row.program)}${row.commodityLabel && row.commodityLabel !== row.program ? `<div class="muted">${escapeHTML(row.commodityLabel)}</div>` : ""}</td>
+        <td>${escapeHTML(row.papType)}<div class="muted">${escapeHTML(row.resultLevel)}</div></td>
         <td>${escapeHTML(row.tier1 || "")}<div class="muted">${escapeHTML(row.tier2 || "")}</div></td>
+        <td class="indicator-cell">
+          ${row.indicatorId ? `<span class="indicator-id">${escapeHTML(row.indicatorId)}</span>` : ""}${escapeHTML(row.indicatorLevel1 || "")}
+          ${row.indicatorLevel2 ? `<div class="muted">${escapeHTML(row.indicatorLevel2)}</div>` : ""}
+          ${row.indicatorLevel3 ? `<div class="muted">${escapeHTML(row.indicatorLevel3)}</div>` : ""}
+        </td>
         <td class="activity-cell">
           ${escapeHTML(row.activity || row.source_note || "")}
           ${row.activity_context ? `<div class="muted">${escapeHTML(row.activity_context)}</div>` : ""}
+          ${row.indicatorMatchBasis ? `<div class="explain-text">${escapeHTML(row.indicatorMatchBasis)}</div>` : ""}
         </td>
         <td>${escapeHTML(row.unit || "")}</td>
         <td>${row.physicalValue ? `${formatDecimal(row.physicalValue)}${row.targetCountValue > 1 ? `<div class="muted">from ${formatDecimal(row.originalPhysicalValue)} / ${formatNumber(row.targetCountValue)} targets</div>` : ""}` : ""}</td>
@@ -981,6 +1036,8 @@ const PlansDashboard = (() => {
       year: parseNumber(row.year),
       program: row.program,
       function: row.tier2 || row.officeFunction,
+      pap: row.papType,
+      indicator: row.indicatorLevel1,
       activity: row.activity || row.source_note || "",
       unit: row.unitLabel,
       physical: row.physicalValue,
@@ -1115,7 +1172,7 @@ const PlansDashboard = (() => {
 
   function toCSV(data) {
     if (!data.length) return "";
-    const fields = ["province", "district", "municipality", "year", "program", "commodity", "tier_1", "tier_2", "activity", "activity_context", "original_activity", "unit", "physical_target", "budget", "original_physical_target", "original_budget", "target_count", "target_scope", "length_km", "source_file", "sheet", "source_row", "allocation_method", "source_note"];
+    const fields = ["province", "district", "municipality", "year", "program", "commodity", "pap_type", "result_level", "prexc_program", "prexc_subprogram", "tier_1", "tier_2", "indicator_id", "indicator_level_1", "indicator_level_2", "indicator_level_3", "indicator_specify_type", "indicator_match_basis", "activity", "activity_context", "original_activity", "unit", "physical_target", "budget", "original_physical_target", "original_budget", "target_count", "target_scope", "length_km", "source_file", "sheet", "source_row", "allocation_method", "source_note", "result_chain", "data_structure_note"];
     const quote = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
     return [fields.join(",")]
       .concat(data.map(row => fields.map(field => quote(row[field])).join(",")))
@@ -1138,3 +1195,9 @@ const PlansDashboard = (() => {
 })();
 
 document.addEventListener("DOMContentLoaded", PlansDashboard.init);
+
+
+
+
+
+
