@@ -44,8 +44,24 @@ function Invoke-NativeChecked {
 foreach ($file in $files) {
   $url = "https://drive.google.com/uc?export=download&id=$($file.Id)"
   $out = Join-Path $rawDir $file.Name
+  $tempOut = "$out.download"
   Write-Host "Downloading $($file.Name)..."
-  Invoke-WebRequest -Uri $url -UseBasicParsing -OutFile $out
+
+  try {
+    Invoke-WebRequest -Uri $url -UseBasicParsing -OutFile $tempOut
+    Move-Item -LiteralPath $tempOut -Destination $out -Force
+  } catch {
+    if (Test-Path -LiteralPath $tempOut) {
+      Remove-Item -LiteralPath $tempOut -Force
+    }
+
+    if (Test-Path -LiteralPath $out) {
+      Write-Warning "Could not download $($file.Name) from Google Drive id $($file.Id). Using the last local copy. Error: $($_.Exception.Message)"
+      continue
+    }
+
+    throw "Could not download $($file.Name) from Google Drive id $($file.Id), and no local copy exists. Error: $($_.Exception.Message)"
+  }
 }
 
 Push-Location $root
