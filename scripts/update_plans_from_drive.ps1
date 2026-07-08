@@ -21,6 +21,26 @@ $files = @(
   @{ Id = "1QFZr3yTIG_665r3Sm_G8RcWZEieatXsr"; Name = "all_programs_2027.xlsx" }
 )
 
+$publishPaths = @(
+  "data/plans_projects_2025_2027.csv",
+  "data/plans_projects_2025_2027_details.csv",
+  "data/plans_projects_metadata.json",
+  "data/plans_projects_unmatched_terms.csv",
+  "data/plans_versions"
+)
+
+function Invoke-NativeChecked {
+  param(
+    [Parameter(Mandatory = $true)][scriptblock]$Command,
+    [Parameter(Mandatory = $true)][string]$Label
+  )
+
+  & $Command
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Label failed with exit code $LASTEXITCODE"
+  }
+}
+
 foreach ($file in $files) {
   $url = "https://drive.google.com/uc?export=download&id=$($file.Id)"
   $out = Join-Path $rawDir $file.Name
@@ -30,7 +50,39 @@ foreach ($file in $files) {
 
 Push-Location $root
 try {
-  python scripts\convert_plans_projects_xlsx.py
+  Invoke-NativeChecked -Label "Planning workbook conversion" -Command {
+    python scripts\convert_plans_projects_xlsx.py
+  }
+
+  if ($env:AGRIPLAN_SKIP_PUBLISH -eq "1") {
+    Write-Host "Skipping GitHub publish because AGRIPLAN_SKIP_PUBLISH=1."
+    return
+  }
+
+  Write-Host "Checking generated planning dataset changes..."
+  Invoke-NativeChecked -Label "Git stage" -Command {
+    git add -- $publishPaths
+  }
+
+  git diff --cached --quiet -- $publishPaths
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "No generated planning data changes to publish."
+    return
+  }
+  if ($LASTEXITCODE -ne 1) {
+    throw "Git diff check failed with exit code $LASTEXITCODE"
+  }
+
+  $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+  Invoke-NativeChecked -Label "Git commit" -Command {
+    git commit -m "Refresh planning datasets $timestamp" -- $publishPaths
+  }
+
+  Invoke-NativeChecked -Label "Git push" -Command {
+    git push
+  }
+
+  Write-Host "Published generated planning datasets to GitHub. GitHub Pages will update production after the deployment completes."
 } finally {
   Pop-Location
 }
