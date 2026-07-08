@@ -54,11 +54,18 @@ DETAIL_FIELDS = [
     "tier_1",
     "tier_2",
     "activity",
+    "activity_context",
+    "original_activity",
     "unit",
     "physical_target",
     "budget",
+    "original_physical_target",
+    "original_budget",
+    "target_count",
+    "target_scope",
     "length_km",
     "allocation_method",
+    "source_row",
     "source_note",
 ]
 
@@ -381,10 +388,22 @@ def preserve_legacy_2027_program(program):
 
 
 def default_detail_fields(row):
-    row.setdefault("commodity", "")
-    row.setdefault("office_function", "")
-    row.setdefault("tier_1", "")
-    row.setdefault("tier_2", "")
+    defaults = {
+        "commodity": "",
+        "office_function": "",
+        "tier_1": "",
+        "tier_2": "",
+        "activity_context": "",
+        "original_activity": row.get("activity", ""),
+        "original_physical_target": row.get("physical_target", ""),
+        "original_budget": row.get("budget", ""),
+        "target_count": "1",
+        "target_scope": row.get("municipality", ""),
+        "source_row": "",
+        "source_note": "",
+    }
+    for key, value in defaults.items():
+        row.setdefault(key, value)
     return row
 
 
@@ -546,7 +565,7 @@ def extract_all_programs_rows(path, sheets, by_province, by_district, aliases):
         current_context = ""
         current_function = normalize_all_programs_function("")
 
-        for row in rows[8:]:
+        for source_row, row in enumerate(rows[8:], start=9):
             cells = row + [""] * 14
             activity_cell = clean_text(cells[0])
             if not activity_cell or activity_cell.startswith("Column "):
@@ -624,11 +643,18 @@ def extract_all_programs_rows(path, sheets, by_province, by_district, aliases):
                     "tier_1": tier_1,
                     "tier_2": tier_2,
                     "activity": activity,
+                    "activity_context": current_context,
+                    "original_activity": activity_cell,
                     "unit": cells[physical_idx],
                     "physical_target": format_number(physical / divisor) if physical else "",
                     "budget": format_number(budget / divisor) if budget else "0.00",
+                    "original_physical_target": format_number(physical) if physical else "",
+                    "original_budget": format_number(budget) if budget else "0.00",
+                    "target_count": str(divisor),
+                    "target_scope": location or district_text,
                     "length_km": "",
                     "allocation_method": "ALL PROGRAMS 2027 municipality split",
+                    "source_row": str(source_row),
                     "source_note": source_note,
                 })
 
@@ -924,7 +950,7 @@ def extract_dedicated_hvcdp_rows(path, sheets, by_district):
             district = block["district"]
             context = ""
 
-            for row in rows[9:]:
+            for source_row, row in enumerate(rows[9:], start=10):
                 cells = row + [""] * 64
                 activity = clean_text(cells[0])
                 unit = clean_text(cells[1])
@@ -957,11 +983,18 @@ def extract_dedicated_hvcdp_rows(path, sheets, by_district):
                         "year": 2027,
                         "program": "High Value Crops",
                         "activity": display_activity,
+                        "activity_context": context,
+                        "original_activity": activity,
                         "unit": unit,
                         "physical_target": format_number(physical_per_target) if physical_per_target else "",
                         "budget": format_number(budget / divisor) if budget else "0.00",
+                        "original_physical_target": format_number(physical) if physical else "",
+                        "original_budget": format_number(budget) if budget else "0.00",
+                        "target_count": str(divisor),
+                        "target_scope": block["label"],
                         "length_km": "",
                         "allocation_method": "district column municipalities split",
+                        "source_row": str(source_row),
                         "source_note": f"{sheet_name} {block['label']} FY 2027 HVCDP district column",
                     })
     return details
@@ -1009,7 +1042,7 @@ def summarize_rows(files, municipal_csv):
             columns_2027 = sheet_2027_columns(rows)
             current_year = None
 
-            for row in rows:
+            for source_row, row in enumerate(rows, start=1):
                 cells = row + [""] * (24 - len(row))
                 joined = " ".join(cells).upper()
                 if "FY 2025" in joined or "CY 2025" in joined:
@@ -1036,11 +1069,18 @@ def summarize_rows(files, municipal_csv):
                         "year": row_year,
                         "program": program,
                         "activity": cells[2] or cells[0],
+                        "activity_context": sheet_name,
+                        "original_activity": cells[0],
                         "unit": cells[1],
                         "physical_target": "",
                         "budget": format_number(amount),
+                        "original_physical_target": "",
+                        "original_budget": format_number(amount),
+                        "target_count": "1",
+                        "target_scope": municipality,
                         "length_km": format_number(length) if length else "",
                         "allocation_method": "direct municipality row",
+                        "source_row": str(source_row),
                         "source_note": cells[2] or cells[1],
                     })
                     continue
@@ -1076,11 +1116,18 @@ def summarize_rows(files, municipal_csv):
                         "year": 2027,
                         "program": program,
                         "activity": activity,
+                        "activity_context": sheet_name,
+                        "original_activity": cells[0],
                         "unit": cells[1],
                         "physical_target": format_number(physical_2027 / divisor) if physical_2027 else "",
                         "budget": format_number(budget_2027 / divisor) if budget_2027 else "0.00",
+                        "original_physical_target": format_number(physical_2027) if physical_2027 else "",
+                        "original_budget": format_number(budget_2027) if budget_2027 else "0.00",
+                        "target_count": str(divisor),
+                        "target_scope": "All district municipalities" if is_all_district_municipalities else remarks,
                         "length_km": "",
                         "allocation_method": "all district municipalities split" if is_all_district_municipalities else "remarks municipality split",
+                        "source_row": str(source_row),
                         "source_note": remarks,
                     })
 
@@ -1097,7 +1144,7 @@ def summarize_rows(files, municipal_csv):
                                 "text": token,
                             })
 
-    return details, unmatched
+    return [default_detail_fields(row) for row in details], unmatched
 
 
 def aggregate(details):

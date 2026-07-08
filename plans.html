@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AgriPlan Cagayan Valley</title>
 
-  <link rel="stylesheet" href="css/plans.css?v=20260511-layout">
+  <link rel="stylesheet" href="css/plans.css?v=20260708-activity-detail">
 </head>
 <body data-theme="dark">
   <div id="plans-app">
@@ -134,6 +134,16 @@
             <strong id="kpi-municipalities">0</strong>
           </article>
           <article class="kpi-card">
+            <span>Physical Target</span>
+            <strong id="kpi-physical">0</strong>
+            <small>extracted units</small>
+          </article>
+          <article class="kpi-card">
+            <span>Units Used</span>
+            <strong id="kpi-units">0</strong>
+            <small>distinct UOMs</small>
+          </article>
+          <article class="kpi-card">
             <span>FMR Length</span>
             <strong id="kpi-length">0</strong>
             <small>km</small>
@@ -164,6 +174,14 @@
           <article class="analysis-panel">
             <div class="panel-title">2027 Budget by Tier 2</div>
             <canvas id="tier2-chart"></canvas>
+          </article>
+          <article class="analysis-panel">
+            <div class="panel-title">Top Activities</div>
+            <canvas id="activity-chart"></canvas>
+          </article>
+          <article class="analysis-panel">
+            <div class="panel-title">Physical Target by Unit</div>
+            <canvas id="unit-chart"></canvas>
           </article>
           <article class="analysis-panel">
             <div class="panel-title">Commodity Timeline</div>
@@ -197,8 +215,9 @@
                   <th><button class="sort-btn" data-sort="program">Commodity / Program</button></th>
                   <th><button class="sort-btn" data-sort="function">Tier / Function</button></th>
                   <th><button class="sort-btn" data-sort="activity">Activity</button></th>
+                  <th><button class="sort-btn" data-sort="unit">Unit</button></th>
+                  <th><button class="sort-btn" data-sort="physical">Physical</button></th>
                   <th><button class="sort-btn" data-sort="budget">Budget</button></th>
-                  <th><button class="sort-btn" data-sort="length">Length</button></th>
                   <th><button class="sort-btn" data-sort="source">Source</button></th>
                 </tr>
               </thead>
@@ -212,6 +231,6 @@
 
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="js/plansDashboard.js?v=20260518-versioned-plans"></script>
+  <script src="js/plansDashboard.js?v=20260708-activity-detail"></script>
 </body>
 </html>

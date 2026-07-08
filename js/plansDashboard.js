@@ -1,5 +1,5 @@
 const PlansDashboard = (() => {
-  const VERSION = "20260518-versioned-plans";
+  const VERSION = "20260708-activity-detail";
   const DETAIL_URL = `data/plans_projects_2025_2027_details.csv?v=${VERSION}`;
   const METADATA_URL = `data/plans_projects_metadata.json?v=${VERSION}`;
   const VERSION_MANIFEST_URL = `data/plans_versions/manifest.json?v=${VERSION}`;
@@ -205,8 +205,12 @@ const PlansDashboard = (() => {
       displayDistrict: districtInfo.label,
       displayMunicipality,
       budgetValue: parseNumber(row.budget),
+      originalBudgetValue: parseNumber(row.original_budget),
       lengthValue: parseNumber(row.length_km),
       physicalValue: parseNumber(row.physical_target),
+      originalPhysicalValue: parseNumber(row.original_physical_target),
+      targetCountValue: parseNumber(row.target_count),
+      unitLabel: row.unit || "Unspecified",
       commodityLabel: row.commodity || row.program || "",
       officeFunction: row.office_function || row.tier_2 || "",
       tier1: row.tier_1 || "",
@@ -214,6 +218,7 @@ const PlansDashboard = (() => {
       searchText: [
         row.province, row.municipality, row.program, row.activity,
         row.commodity, row.office_function, row.tier_1, row.tier_2,
+        row.activity_context, row.original_activity, row.target_scope,
         row.district, row.unit, row.source_note, row.source_file, row.sheet
       ].join(" ").toLowerCase()
     };
@@ -524,7 +529,10 @@ const PlansDashboard = (() => {
     const municipalities = new Set(data.filter(row => row.municipality).map(row => `${row.province}|${row.municipality}`));
     setText("kpi-items", formatNumber(data.length));
     setText("kpi-budget", formatNumber(sum(data, "budgetValue")));
+    const units = new Set(data.map(row => row.unitLabel).filter(unit => unit && unit !== "Unspecified"));
     setText("kpi-municipalities", formatNumber(municipalities.size));
+    setText("kpi-physical", formatDecimal(sum(data, "physicalValue")));
+    setText("kpi-units", formatNumber(units.size));
     setText("kpi-length", formatDecimal(sum(data, "lengthValue")));
   }
 
@@ -550,6 +558,8 @@ const PlansDashboard = (() => {
     renderCategoryChart("commodity-chart", groupBudget(data, "commodity").slice(0, 10), "Budget", "#2563eb");
     renderCategoryChart("tier1-chart", groupBudget(data, "tier1").slice(0, 8), "Budget", "#7c3aed");
     renderCategoryChart("tier2-chart", groupBudget(data, "tier2").slice(0, 8), "Budget", "#0f766e");
+    renderCategoryChart("activity-chart", groupBudget(data, "activity").slice(0, 10), "Budget", "#b91c1c");
+    renderCategoryChart("unit-chart", groupPhysicalByUnit(data).slice(0, 10), "Physical target", "#047857", value => `${formatDecimal(value)} units`);
     renderYearChart();
   }
 
@@ -566,6 +576,8 @@ const PlansDashboard = (() => {
             ? (row.tier1 || "Unspecified Tier 1")
             : field === "tier2"
               ? (row.tier2 || "Unspecified Tier 2")
+            : field === "activity"
+              ? (row.activity || row.source_note || "Unspecified Activity")
           : (row[field] || "Unspecified");
       map.set(key, (map.get(key) || 0) + row.budgetValue);
     });
@@ -574,7 +586,19 @@ const PlansDashboard = (() => {
       .sort((a, b) => b.value - a.value);
   }
 
-  function renderCategoryChart(id, data, label, color) {
+  function groupPhysicalByUnit(data) {
+    const map = new Map();
+    data.forEach(row => {
+      const key = row.unitLabel || "Unspecified Unit";
+      map.set(key, (map.get(key) || 0) + row.physicalValue);
+    });
+    return [...map.entries()]
+      .filter(([, value]) => value > 0)
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value);
+  }
+
+  function renderCategoryChart(id, data, label, color, tooltipFormatter) {
     const ctx = document.getElementById(id);
     if (charts[id]) charts[id].destroy();
     const theme = chartTheme();
@@ -586,7 +610,7 @@ const PlansDashboard = (() => {
     charts[id] = new Chart(ctx, {
       type: isDoughnut ? "doughnut" : isLine ? "line" : "bar",
       data: {
-        labels: data.map(item => item.label),
+        labels: data.map(item => chartLabel(item.label)),
         datasets: [{
           label,
           data: data.map(item => item.value),
@@ -602,7 +626,7 @@ const PlansDashboard = (() => {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: isDoughnut, labels: { color: theme.text } },
-          tooltip: { callbacks: { label: item => `${label}: ${formatNumber(item.raw)} PHP '000` } }
+          tooltip: { callbacks: { label: item => tooltipFormatter ? `${label}: ${tooltipFormatter(item.raw)}` : `${label}: ${formatNumber(item.raw)} PHP '000` } }
         },
         scales: isDoughnut ? {} : categoryScales(horizontal, theme)
       }
@@ -675,6 +699,10 @@ const PlansDashboard = (() => {
       if (activeYear === "2027" && topTier2) notes.push(["", `${topTier2.label} is the largest Tier 2/function grouping at ${formatNumber(topTier2.value)} PHP '000.`]);
       const topDistrict = groupBudget(data, "district")[0];
       if (topDistrict) notes.push(["", `${topDistrict.label} is the top district grouping for this lens at ${formatNumber(topDistrict.value)} PHP '000.`]);
+      const topActivity = groupBudget(data, "activity")[0];
+      if (topActivity) notes.push(["", `Top activity by budget: ${topActivity.label} at ${formatNumber(topActivity.value)} PHP '000.`]);
+      const topUnit = groupPhysicalByUnit(data)[0];
+      if (topUnit) notes.push(["", `Largest extracted physical target unit: ${topUnit.label} with ${formatDecimal(topUnit.value)} total units.`]);
       if (activeYear === "2027") notes.push(["warn", "Use this view to compare proposed allocations with the need-gap layer in the decision map before realignment."]);
       if (zeroBudget > 0) notes.push(["warn", `${zeroBudget} records have no extracted budget value; verify the source workbook before treating them as unfunded.`]);
       if (budget <= 0) notes.push(["danger", "The current filter has no extracted budget. This may be a real gap or a workbook encoding issue."]);
@@ -702,10 +730,14 @@ const PlansDashboard = (() => {
         <td>${escapeHTML(row.year)}</td>
         <td>${escapeHTML(row.program)}${row.commodityLabel && row.commodityLabel !== row.program ? `<div class="muted">${escapeHTML(row.commodityLabel)}</div>` : ""}</td>
         <td>${escapeHTML(row.tier1 || "")}<div class="muted">${escapeHTML(row.tier2 || "")}</div></td>
-        <td class="activity-cell">${escapeHTML(row.activity || row.source_note || "")}<div class="muted">${escapeHTML(row.unit || "")}</div></td>
-        <td>${formatNumber(row.budgetValue)}</td>
-        <td>${row.lengthValue ? formatDecimal(row.lengthValue) + " km" : ""}</td>
-        <td>${escapeHTML(row.source_file)}</td>
+        <td class="activity-cell">
+          ${escapeHTML(row.activity || row.source_note || "")}
+          ${row.activity_context ? `<div class="muted">${escapeHTML(row.activity_context)}</div>` : ""}
+        </td>
+        <td>${escapeHTML(row.unit || "")}</td>
+        <td>${row.physicalValue ? `${formatDecimal(row.physicalValue)}${row.targetCountValue > 1 ? `<div class="muted">from ${formatDecimal(row.originalPhysicalValue)} / ${formatNumber(row.targetCountValue)} targets</div>` : ""}` : ""}</td>
+        <td>${formatNumber(row.budgetValue)}${row.targetCountValue > 1 ? `<div class="muted">orig ${formatNumber(row.originalBudgetValue)}</div>` : ""}</td>
+        <td>${escapeHTML(row.source_file)}${row.source_row ? `<div class="muted">${escapeHTML(row.sheet)} row ${escapeHTML(row.source_row)}</div>` : `<div class="muted">${escapeHTML(row.sheet || "")}</div>`}</td>
       </tr>
     `).join("");
   }
@@ -916,6 +948,9 @@ const PlansDashboard = (() => {
       row.activity,
       row.source_note,
       row.unit,
+      row.activity_context,
+      row.original_activity,
+      row.target_scope,
       row.program,
       row.commodityLabel,
       row.tier1,
@@ -947,6 +982,8 @@ const PlansDashboard = (() => {
       program: row.program,
       function: row.tier2 || row.officeFunction,
       activity: row.activity || row.source_note || "",
+      unit: row.unitLabel,
+      physical: row.physicalValue,
       budget: row.budgetValue,
       length: row.lengthValue,
       source: row.source_file
@@ -1000,14 +1037,14 @@ const PlansDashboard = (() => {
         },
         y: {
           grid: { color: "transparent" },
-          ticks: { color: theme.text, autoSkip: false }
+          ticks: { color: theme.text, autoSkip: true, maxTicksLimit: 6, callback: function(value) { return chartLabel(this.getLabelForValue ? this.getLabelForValue(value) : value, 18); }, font: { size: 10 } }
         }
       };
     }
     return {
       x: {
         grid: { color: "transparent" },
-        ticks: { color: theme.text }
+        ticks: { color: theme.text, font: { size: 10 } }
       },
       y: {
         beginAtZero: true,
@@ -1019,7 +1056,7 @@ const PlansDashboard = (() => {
 
   function timelineScales(theme) {
     return {
-      x: { grid: { color: theme.grid }, ticks: { color: theme.text } },
+      x: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { size: 10 } } },
       y: {
         beginAtZero: true,
         grid: { color: theme.grid },
@@ -1029,7 +1066,7 @@ const PlansDashboard = (() => {
         beginAtZero: true,
         position: "right",
         grid: { drawOnChartArea: false },
-        ticks: { color: theme.text }
+        ticks: { color: theme.text, font: { size: 10 } }
       }
     };
   }
@@ -1037,6 +1074,11 @@ const PlansDashboard = (() => {
   function palette(index, fallback) {
     const colors = ["#1a6b3c", "#2e7d9a", "#b45309", "#7c3aed", "#b91c1c", "#047857", "#2563eb", "#9333ea", "#c2410c", "#0f766e"];
     return colors[index % colors.length] || fallback;
+  }
+
+  function chartLabel(value, maxLength = 22) {
+    const text = String(value || "");
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}...` : text;
   }
 
   function formatTimestamp(value) {
@@ -1073,7 +1115,7 @@ const PlansDashboard = (() => {
 
   function toCSV(data) {
     if (!data.length) return "";
-    const fields = ["province", "district", "municipality", "year", "program", "commodity", "tier_1", "tier_2", "activity", "unit", "physical_target", "budget", "length_km", "source_file", "sheet", "allocation_method"];
+    const fields = ["province", "district", "municipality", "year", "program", "commodity", "tier_1", "tier_2", "activity", "activity_context", "original_activity", "unit", "physical_target", "budget", "original_physical_target", "original_budget", "target_count", "target_scope", "length_km", "source_file", "sheet", "source_row", "allocation_method", "source_note"];
     const quote = value => `"${String(value ?? "").replace(/"/g, '""')}"`;
     return [fields.join(",")]
       .concat(data.map(row => fields.map(field => quote(row[field])).join(",")))

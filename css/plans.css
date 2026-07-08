@@ -339,11 +339,9 @@ input[type="text"]:focus {
 
 .content-panel {
   min-width: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(250px, 1fr) minmax(220px, 34vh);
-  gap: 10px;
+  display: block;
   padding: 12px;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .commodity-tabs {
@@ -364,8 +362,9 @@ input[type="text"]:focus {
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  grid-template-columns: repeat(6, minmax(120px, 1fr));
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .kpi-card,
@@ -404,13 +403,14 @@ body[data-theme="dark"] .kpi-card strong {
 .analysis-grid {
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .analysis-panel {
   min-width: 0;
-  min-height: 0;
+  min-height: 148px;
   padding: 10px;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -464,7 +464,7 @@ body[data-theme="dark"] .note.danger {
 }
 
 .table-panel {
-  min-height: 0;
+  min-height: 520px;
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
@@ -507,6 +507,7 @@ body[data-theme="dark"] .note.danger {
 
 table {
   width: 100%;
+  min-width: 1180px;
   border-collapse: collapse;
   font-size: 12px;
 }
@@ -573,8 +574,8 @@ body[data-theme="dark"] tbody tr:hover {
 }
 
 .activity-cell {
-  max-width: 420px;
-  min-width: 260px;
+  max-width: 520px;
+  min-width: 320px;
 }
 
 .muted { color: var(--muted); }
@@ -595,9 +596,7 @@ body[data-theme="dark"] tbody tr:hover {
   .content-panel {
     height: auto;
     overflow: visible;
-    grid-template-rows: auto;
   }
-
   .analysis-grid,
   .kpi-grid {
     grid-template-columns: 1fr 1fr;
