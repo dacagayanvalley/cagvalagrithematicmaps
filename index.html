@@ -380,6 +380,7 @@
           <button class="chart-tab" data-chart="poverty">Poverty Trend</button>
           <button class="chart-tab" data-chart="production">Production</button>
           <button class="chart-tab" data-chart="scatter">Scatter</button>
+          <button class="chart-tab" data-chart="rcpc">RCPC Trends</button>
         </div>
         <div id="panel-bar" class="chart-panel active">
           <canvas id="chart-bar"></canvas>
@@ -395,6 +396,12 @@
         </div>
         <div id="panel-scatter" class="chart-panel">
           <canvas id="chart-scatter"></canvas>
+        </div>
+        <div id="panel-rcpc" class="chart-panel">
+          <div class="rcpc-trend-grid">
+            <canvas id="chart-rcpc-year"></canvas>
+            <canvas id="chart-rcpc-month"></canvas>
+          </div>
         </div>
       </div>
 
@@ -437,17 +444,17 @@
 <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
 
 <!-- App Modules (load in dependency order) -->
-<script src="js/config.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/utils.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/aggregation.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/dataLoader.js?v=20260603-bswm-fertmap-layer"></script>
+<script src="js/config.js?v=20260810-rcpc-trends"></script>
+<script src="js/utils.js?v=20260810-rcpc-trends"></script>
+<script src="js/aggregation.js?v=20260810-rcpc-trends"></script>
+<script src="js/dataLoader.js?v=20260810-rcpc-trends"></script>
 <script src="js/priorityScoring.js?v=20260603-bswm-fertmap-layer"></script>
 <script src="js/visualizations.js?v=20260603-bswm-fertmap-layer"></script>
 <script src="js/mapLayers.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/charts.js?v=20260603-bswm-fertmap-layer"></script>
+<script src="js/charts.js?v=20260810-rcpc-trends"></script>
 <script src="js/weatherOverlay.js?v=20260609-cis-weather"></script>
 <script src="js/climate.js?v=20260603-bswm-fertmap-layer"></script>
-<script src="js/app.js?v=20260609-cis-weather"></script>
+<script src="js/app.js?v=20260810-rcpc-trends"></script>
 
 </body>
 </html>

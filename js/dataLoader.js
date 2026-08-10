@@ -22,6 +22,8 @@ const DataLoader = (() => {
   let bswmFertMapSamplesData = [];
   let rcpcSummaryData = [];
   let rcpcIncidenceData = [];
+  let rcpcYearlyData = [];
+  let rcpcMonthlyData = [];
   let fmrProjectsData = [];
   let fmrSummaryData = [];
   let f2c2ClustersData = [];
@@ -266,6 +268,22 @@ const DataLoader = (() => {
     }
 
     try {
+      rcpcYearlyData = await fetchCSV(dataPath + "rcpc_yearly_summary.csv");
+      console.info(`Loaded rcpc_yearly_summary.csv: ${rcpcYearlyData.length} trend rows`);
+    } catch (e) {
+      console.warn("rcpc_yearly_summary.csv not found. RCPC year trend chart will be unavailable.", e);
+      rcpcYearlyData = [];
+    }
+
+    try {
+      rcpcMonthlyData = await fetchCSV(dataPath + "rcpc_monthly_summary.csv");
+      console.info(`Loaded rcpc_monthly_summary.csv: ${rcpcMonthlyData.length} trend rows`);
+    } catch (e) {
+      console.warn("rcpc_monthly_summary.csv not found. RCPC month trend chart will be unavailable.", e);
+      rcpcMonthlyData = [];
+    }
+
+    try {
       fmrSummaryData = await fetchCSV(dataPath + "fmr_municipal_summary.csv");
       mergeFmrSummaryData(fmrSummaryData);
       console.info(`Loaded fmr_municipal_summary.csv: ${fmrSummaryData.length} records`);
@@ -384,6 +402,8 @@ const DataLoader = (() => {
       bswmFertMapSamplesData,
       rcpcSummaryData,
       rcpcIncidenceData,
+      rcpcYearlyData,
+      rcpcMonthlyData,
       fmrProjectsData,
       fmrSummaryData,
       f2c2ClustersData,
@@ -1732,6 +1752,8 @@ const DataLoader = (() => {
     get bswmFertMapSamplesData() { return bswmFertMapSamplesData; },
     get rcpcSummaryData() { return rcpcSummaryData; },
     get rcpcIncidenceData() { return rcpcIncidenceData; },
+    get rcpcYearlyData() { return rcpcYearlyData; },
+    get rcpcMonthlyData() { return rcpcMonthlyData; },
     get fmrProjectsData() { return fmrProjectsData; },
     get fmrSummaryData() { return fmrSummaryData; },
     get f2c2ClustersData() { return f2c2ClustersData; },

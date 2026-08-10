@@ -8,12 +8,14 @@ const Charts = (() => {
   let productionChart = null; // production comparison panel (chart-line2)
   let scatterChart = null;
   let pieChart = null;
+  let rcpcYearChart = null;
+  let rcpcMonthChart = null;
 
   function destroyAll() {
-    [barChart, lineChart, productionChart, scatterChart, pieChart].forEach(c => {
+    [barChart, lineChart, productionChart, scatterChart, pieChart, rcpcYearChart, rcpcMonthChart].forEach(c => {
       if (c) { c.destroy(); }
     });
-    barChart = lineChart = productionChart = scatterChart = pieChart = null;
+    barChart = lineChart = productionChart = scatterChart = pieChart = rcpcYearChart = rcpcMonthChart = null;
   }
 
   // Shared chart options
@@ -241,6 +243,138 @@ const Charts = (() => {
     });
   }
 
+  function aggregateTrend(rows, scope, keyField) {
+    const buckets = {};
+    rows
+      .filter(row => row.trend_scope === scope)
+      .forEach(row => {
+        const key = row[keyField];
+        if (!key) return;
+        if (!buckets[key]) {
+          buckets[key] = { key, records: 0, affected: 0, farmers: 0, risk: 0, count: 0 };
+        }
+        buckets[key].records += Utils.parseNumeric(row.incident_records) || 0;
+        buckets[key].affected += Utils.parseNumeric(row.affected_area_ha) || 0;
+        buckets[key].farmers += Utils.parseNumeric(row.affected_farmers) || 0;
+        buckets[key].risk += Utils.parseNumeric(row.risk_score) || 0;
+        buckets[key].count += 1;
+      });
+    return Object.values(buckets).map(row => ({
+      ...row,
+      risk: row.count ? row.risk / row.count : 0
+    }));
+  }
+
+  function monthLabel(row) {
+    const names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = Utils.parseNumeric(row.key);
+    return names[month] || row.key;
+  }
+
+  function renderRcpcTrends() {
+    const yearCtx = document.getElementById("chart-rcpc-year");
+    const monthCtx = document.getElementById("chart-rcpc-month");
+    const yearlyRows = DataLoader.rcpcYearlyData || [];
+    const monthlyRows = DataLoader.rcpcMonthlyData || [];
+
+    if (yearCtx) {
+      if (rcpcYearChart) rcpcYearChart.destroy();
+      const yearly = aggregateTrend(yearlyRows, "region_year", "year")
+        .sort((a, b) => Utils.parseNumeric(a.key) - Utils.parseNumeric(b.key));
+
+      rcpcYearChart = new Chart(yearCtx, {
+        type: "bar",
+        data: {
+          labels: yearly.map(row => row.key),
+          datasets: [
+            {
+              label: "Affected Area (ha)",
+              data: yearly.map(row => row.affected),
+              backgroundColor: "rgba(31, 120, 80, 0.72)",
+              borderColor: "#1f7850",
+              borderWidth: 1,
+              borderRadius: 3,
+              yAxisID: "y"
+            },
+            {
+              label: "Incident Records",
+              data: yearly.map(row => row.records),
+              type: "line",
+              borderColor: "#c44e35",
+              backgroundColor: "rgba(196, 78, 53, 0.15)",
+              tension: 0.25,
+              pointRadius: 3,
+              yAxisID: "y1"
+            }
+          ]
+        },
+        options: {
+          ...baseOptions,
+          plugins: {
+            ...baseOptions.plugins,
+            title: { display: true, text: "RCPC Pest and Disease Occurrences by Year", font: { ...baseFont, size: 13 } }
+          },
+          scales: {
+            x: { ticks: { font: baseFont } },
+            y: { position: "left", title: { display: true, text: "Affected ha", font: baseFont }, ticks: { font: baseFont } },
+            y1: { position: "right", grid: { drawOnChartArea: false }, title: { display: true, text: "Records", font: baseFont }, ticks: { font: baseFont } }
+          }
+        }
+      });
+    }
+
+    if (monthCtx) {
+      if (rcpcMonthChart) rcpcMonthChart.destroy();
+      const years = monthlyRows
+        .filter(row => row.trend_scope === "region_month")
+        .map(row => Utils.parseNumeric(row.year))
+        .filter(value => value !== null);
+      const latestYear = years.length ? Math.max(...years) : null;
+      const monthly = aggregateTrend(
+        monthlyRows.filter(row => Utils.parseNumeric(row.year) === latestYear),
+        "region_month",
+        "month_num"
+      ).sort((a, b) => Utils.parseNumeric(a.key) - Utils.parseNumeric(b.key));
+
+      rcpcMonthChart = new Chart(monthCtx, {
+        type: "bar",
+        data: {
+          labels: monthly.map(monthLabel),
+          datasets: [
+            {
+              label: "Incident Records",
+              data: monthly.map(row => row.records),
+              backgroundColor: "rgba(67, 112, 190, 0.72)",
+              borderColor: "#4370be",
+              borderWidth: 1,
+              borderRadius: 3
+            },
+            {
+              label: "Affected Farmers",
+              data: monthly.map(row => row.farmers),
+              type: "line",
+              borderColor: "#b88b17",
+              backgroundColor: "rgba(184, 139, 23, 0.18)",
+              tension: 0.25,
+              pointRadius: 3
+            }
+          ]
+        },
+        options: {
+          ...baseOptions,
+          plugins: {
+            ...baseOptions.plugins,
+            title: { display: true, text: `RCPC Monthly Occurrences (${latestYear || "Latest Year"})`, font: { ...baseFont, size: 13 } }
+          },
+          scales: {
+            x: { ticks: { font: baseFont } },
+            y: { ticks: { font: baseFont }, title: { display: true, text: "Count", font: baseFont } }
+          }
+        }
+      });
+    }
+  }
+
   // ============================================================
   // RANKING TABLE
   // ============================================================
@@ -292,6 +426,7 @@ const Charts = (() => {
 
     renderTopBar(rows, field, n, direction);
     renderRegionalPie(rows);
+    renderRcpcTrends();
     renderRankingTable(rows, field, 15, direction);
 
     // Scatter only if different fields
@@ -308,6 +443,7 @@ const Charts = (() => {
     renderProductionComparison,
     renderScatter,
     renderRegionalPie,
+    renderRcpcTrends,
     renderRankingTable,
     updateAll,
     destroyAll

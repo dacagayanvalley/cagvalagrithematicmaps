@@ -716,6 +716,19 @@ body[data-theme="dark"] .stat-card.stat-danger { background: #351719; }
 .chart-panel.active { display: block; }
 .chart-panel canvas { max-height: 160px !important; }
 
+.rcpc-trend-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  height: 100%;
+  min-height: 0;
+}
+
+.rcpc-trend-grid canvas {
+  width: 100% !important;
+  min-width: 0;
+}
+
 /* Rankings panel */
 .ranking-section {
   width: 280px;
@@ -1825,6 +1838,12 @@ body[data-theme="dark"] .stat-card.stat-danger { background: #351719; }
 
   .chart-panel canvas {
     max-height: 104px !important;
+  }
+
+  .rcpc-trend-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    overflow-y: auto;
   }
 
   .sidebar-section {

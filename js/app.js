@@ -1813,6 +1813,7 @@ const App = (() => {
         if (target === "poverty") Charts.renderPovertyTrend(currentRows);
         if (target === "production") Charts.renderProductionComparison(currentRows, "rice");
         if (target === "scatter") Charts.renderScatter(currentRows, "poverty_2023", currentIndicator);
+        if (target === "rcpc") Charts.renderRcpcTrends();
       });
     });
 

@@ -1,28 +1,42 @@
 {
-  "generated_at": "2026-06-03T03:40:14.664310+00:00",
-  "source": "Regional Crop Protection Center, DA-RFO2 shared CSV folder",
+  "generated_at": "2026-08-10T01:01:11.428146+00:00",
+  "source": "Regional Crop Protection Center, DA-RFO2 shared CSV/XLSX folder",
   "source_files": {
     "rice_pest_diseases_2015_2026.csv": {
       "commodity_group": "rice",
+      "format": "csv",
       "records": 4354
+    },
+    "rice_pest_data_2026_jun_jul.xlsx": {
+      "commodity_group": "rice",
+      "format": "xlsx",
+      "records": 94
     },
     "corn_pest_disease_incidence_2015_2026.csv": {
       "commodity_group": "corn",
+      "format": "csv",
       "records": 3881
     },
     "hvc_pest_disease_incidence_2015_2026.csv": {
       "commodity_group": "hvc",
+      "format": "csv",
       "records": 1101
     },
     "cassava_pest_disease_incidence_2015_2026.csv": {
       "commodity_group": "cassava",
+      "format": "csv",
       "records": 116
     }
   },
   "detail_file": "rcpc_pest_disease_incidence.csv",
   "summary_file": "rcpc_municipal_summary.csv",
-  "records": 9452,
+  "yearly_summary_file": "rcpc_yearly_summary.csv",
+  "monthly_summary_file": "rcpc_monthly_summary.csv",
+  "raw_records_before_dedupe": 9546,
+  "records": 8604,
   "municipalities": 104,
+  "yearly_summary_rows": 931,
+  "monthly_summary_rows": 3836,
   "columns_considered": [
     "incident_id",
     "source_file",
@@ -34,6 +48,7 @@
     "year_raw",
     "year_start",
     "year_end",
+    "period_key",
     "region",
     "province",
     "municipality",
@@ -66,6 +81,8 @@
   ],
   "notes": [
     "Raw source headers with embedded newlines were normalized to stable snake_case fields.",
+    "The 2026 June-July rice workbook is integrated as an additive source for recent pest occurrences.",
+    "Year and month trend files include regionwide, commodity, pest-family, province, and municipality scopes.",
     "Rows with invalid or out-of-region coordinates remain in the detail CSV but are not counted as valid incident points.",
     "Year ranges such as 2023-2024 are represented as year_start and year_end.",
     "Risk scores are screening indicators for planning and field validation, not official loss or damage assessments."
