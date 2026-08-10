@@ -1178,9 +1178,21 @@ const App = (() => {
     const year = Utils.getIndicatorYear(currentIndicator);
     const pieces = [];
     if (year) pieces.push(`Year: ${year}`);
+    const recentWindow = getRcpcRecentWindowMeta(currentIndicator);
+    if (recentWindow) pieces.push(recentWindow);
     if (cfg.aggregation) pieces.push(`District/province: ${cfg.aggregation.replace(/_/g, " ")}`);
     el.textContent = pieces.join(" | ");
     updateIndicatorDataNote();
+  }
+
+  function getRcpcRecentWindowMeta(field) {
+    if (!field || !field.startsWith("rcpc_recent_")) return "";
+    const rows = (currentRows && currentRows.length ? currentRows : DataLoader.getMunicipalRows())
+      .filter(row => row && row._joined !== false && row.rcpc_recent_years);
+    const windows = Array.from(new Set(rows.map(row => row.rcpc_recent_years).filter(Boolean))).sort();
+    if (windows.length === 0) return "Recent window: latest 2 available years";
+    if (windows.length === 1) return `Recent window: ${windows[0]}`;
+    return `Recent windows: ${windows[0]} to ${windows[windows.length - 1]} by municipality`;
   }
 
   function updateIndicatorDataNote() {

@@ -348,7 +348,7 @@ const INDICATOR_CONFIG = {
     unit: "ha",
     aggregation: "sum",
     colorScheme: "YlOrRd",
-    description: "Affected area in records from the latest available year and the preceding year for each municipality."
+    description: "Affected area in records from the recent-year window shown in the indicator metadata; this is the latest available year and the preceding year for each municipality."
   },
   rcpc_affected_farmers: {
     label: "RCPC Affected Farmers",
@@ -366,7 +366,7 @@ const INDICATOR_CONFIG = {
     unit: "farmers",
     aggregation: "sum",
     colorScheme: "Oranges",
-    description: "Affected farmers from the latest available year and preceding year for each municipality."
+    description: "Affected farmers from the recent-year window shown in the indicator metadata; this is the latest available year and preceding year for each municipality."
   },
   rcpc_avg_infestation_pct: {
     label: "RCPC Avg Infestation",
@@ -422,7 +422,7 @@ const INDICATOR_CONFIG = {
     unit: "ha",
     aggregation: "sum",
     colorScheme: "OrRd",
-    description: "Recent untreated affected area from the latest available year and preceding year."
+    description: "Recent untreated affected area from the recent-year window shown in the indicator metadata; this is the latest available year and preceding year."
   },
   rcpc_rice_affected_area_ha: {
     label: "RCPC Rice Affected Area",

@@ -118,6 +118,9 @@ SUMMARY_FIELDS = [
     "rcpc_top_commodity",
     "rcpc_top_pest_family",
     "rcpc_latest_year",
+    "rcpc_recent_year_start",
+    "rcpc_recent_year_end",
+    "rcpc_recent_years",
     "rcpc_latest_report_date",
     "rcpc_total_planted_area_ha",
     "rcpc_monitored_area_ha",
@@ -544,7 +547,8 @@ def build_summary(records):
         infestations = [parse_number(r["percent_infestation"]) for r in rows if parse_number(r["percent_infestation"]) is not None]
         severities = [parse_number(r["severity"]) for r in rows if parse_number(r["severity"]) is not None]
         latest = max((parse_number(r["year_end"]) or parse_number(r["year_start"]) or 0) for r in rows)
-        recent_rows = [r for r in rows if (parse_number(r["year_end"]) or parse_number(r["year_start"]) or 0) >= max(0, latest - 1)]
+        recent_start = max(0, latest - 1)
+        recent_rows = [r for r in rows if (parse_number(r["year_end"]) or parse_number(r["year_start"]) or 0) >= recent_start]
         commodities = Counter(r["commodity_group"] for r in rows if r["commodity_group"])
         pests = Counter(r["pest_family"] for r in rows if r["pest_family"])
 
@@ -574,6 +578,9 @@ def build_summary(records):
             "rcpc_top_commodity": commodities.most_common(1)[0][0] if commodities else "",
             "rcpc_top_pest_family": pests.most_common(1)[0][0] if pests else "",
             "rcpc_latest_year": int(latest) if latest else "",
+            "rcpc_recent_year_start": int(recent_start) if latest else "",
+            "rcpc_recent_year_end": int(latest) if latest else "",
+            "rcpc_recent_years": f"{int(recent_start)}-{int(latest)}" if latest and recent_start != latest else (str(int(latest)) if latest else ""),
             "rcpc_latest_report_date": "",
             "rcpc_total_planted_area_ha": planted,
             "rcpc_monitored_area_ha": monitored,
